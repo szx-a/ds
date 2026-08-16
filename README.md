@@ -81,6 +81,18 @@ packages/memory/memory-body/           # host 包：存储 + 命令 + Remote + G
 packages/memory/memory-body-preset/    # preset 包：工具 + 自动总结
 ```
 
+**8. 构建**（在 harness 根目录）：
+
+```bash
+pnpm exec tsc -b packages/memory/memory-body/tsconfig.host.json packages/memory/memory-body-preset
+cd packages/memory/memory-body          && pnpm exec tsdown --env.DSH_BUILD_FACE client
+cd packages/memory/memory-body-preset   && pnpm exec tsdown
+```
+
+**9. 重启**：`Ctrl+C` 停掉 `pnpm dsh web` 再重启（命令在 node 进程启动时注册，只刷新浏览器不会加载）。
+
+> ⚠️ 本仓库是**源码存档**，不含 `lib/` 构建产物，且依赖 harness monorepo 的 `@deepseek-ai/*` 包 —— 必须放进 harness 源码树内构建，不能独立编译运行。
+
 ### 方式二：npm 安装（规划中）
 
 两个包已具备标准 npm 包结构（`@2464500754/dsh-layered-memory-architecture` + `-preset`）。发布前需：
