@@ -1,6 +1,6 @@
 # 加载后逐项验收清单
 
-> 用途：加载 `memory-body` 成功后，逐项确认功能；某步失败时，按"报什么"贴给我，我能快速定位。
+> 用途：加载 `memory-body` 成功后，逐项确认功能；
 > 前置：已按 VERIFY.md 完成配置 + 启动 `pnpm dsh web` + 创建体 `code`。
 
 ## 第 0 项：加载成功标志
@@ -87,7 +87,7 @@ Retired 1 memory matching "构建" (kept in history, not deleted)
 
 ---
 
-## 故障报告模板（任一项失败时，贴这个给我）
+## 故障报告模板（任一项失败时，可反馈)
 
 ```
 【哪一项】第 N 项 /remember
@@ -96,8 +96,3 @@ Retired 1 memory matching "构建" (kept in history, not deleted)
 【环境】Node 版本、是否 tsx 启动、agent.cordis.yml 里 memory-body 那段配置
 ```
 
----
-
-## 通过标准（goal 收尾条件）
-
-第 1、2、3、4 项全部符合预期输出 → `/remember → 存储 → 检索` 闭环跑通 → goal 完成（GUI 为已记录延后项）。
