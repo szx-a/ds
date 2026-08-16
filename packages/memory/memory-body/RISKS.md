@@ -44,11 +44,11 @@
 
 1. **中文分词**：FTS5 `unicode61` 对英文可靠；中文无空格，长句可能整体成一个 token。中文检索请用短关键词（如"构建"、"pnpm"）。
 2. **FTS 每次重建**：v0.1 每次 `memory_search` 前全量重建挂载体的索引，条目少时无感；条目多（>几千）会变慢，后续改增量。
-3. **挂载是 cordis.yml 配置**：不是 GUI/settings，只是"给懂的人"那一头；GUI 是后续。
+3. **挂载是 cordis.yml 配置**：不是 GUI/settings，只是"给懂的人"那一头；GUI也可
 4. **自动总结是手动 `/summarize`**：不是"阈值+会话结束"自动触发，那是 v0.2（接入点已探明：`agent/status` 的 `running→idle`）。
 
 ## 建议的验证顺序（重申）
 
 1. `node --import tsx/esm F:/dp/memory-body-plugin/test/store.test.ts`（已过 4 ✓）
-2. `node --import tsx/esm F:/dp/memory-body-plugin/test/fts.test.ts`（暴露风险 1）
-3. 按 VERIFY.md 第 2-4 步加载 + 跑闭环（暴露风险 2/3/4）
+2. `node --import tsx/esm F:/dp/memory-body-plugin/test/fts.test.ts`（检验暴露风险 1）
+3. 按 VERIFY.md 第 2-4 步加载 + 跑闭环（检验暴露风险 2/3/4）
