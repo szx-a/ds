@@ -54,12 +54,14 @@
 - id: memory-store
   name: '@2464500754/dsh-layered-memory-architecture/memory-store'
   config:
-    root: 'F:/dp/memory-body-data'
+    root: 'F:/dp/memory-body-data'   # ⚠️ 改成你自己的数据目录路径！
     defaultBodies: [code]
 
 - id: memory-body
   name: '@2464500754/dsh-layered-memory-architecture'
 ```
+
+> ⚠️ `root` 是**数据存放目录**，请改成你自己的绝对路径（如 `'D:/ds/memory-data'`）。首次启动会自动建目录。
 
 **3. `apps/cli/config/agent-presets/standard/agent.cordis.yml`** —— 末尾加 1 个 row（preset 平面）：
 
@@ -70,9 +72,18 @@
     autoSummarize: false
 ```
 
-**4. `tsconfig.host.json`** —— `references` 加 2 行
+**4. `tsconfig.host.json`** —— `references` 加 2 行：
 
-**5. `tsconfig.client.json`** —— `references` 加 1 行
+```json
+{ "path": "./packages/memory/memory-body/tsconfig.host.json" },
+{ "path": "./packages/memory/memory-body-preset" }
+```
+
+**5. `tsconfig.client.json`** —— `references` 加 1 行：
+
+```json
+{ "path": "./packages/memory/memory-body/tsconfig.client.json" }
+```
 
 **6~7. 放入插件目录**：
 
@@ -90,6 +101,13 @@ cd packages/memory/memory-body-preset   && pnpm exec tsdown
 ```
 
 **9. 重启**：`Ctrl+C` 停掉 `pnpm dsh web` 再重启（命令在 node 进程启动时注册，只刷新浏览器不会加载）。
+
+**10. 初始化一个体**：默认挂载 `[code]`，但本仓库**不含记忆数据**（数据是私有的，不随源码分发）。重启后先建体：
+
+- 方式 A：设置页 → 「记忆体」tab → 新建体，id 填 `code`（或改成你自己的 id）
+- 方式 B：手动在 `root` 目录建 `code/body.json`（内容见下方「后台编辑」）
+
+建完体才能 `/remember` / `memory_search`，否则会报「body does not exist」。
 
 > ⚠️ 本仓库是**源码存档**，不含 `lib/` 构建产物，且依赖 harness monorepo 的 `@deepseek-ai/*` 包 —— 必须放进 harness 源码树内构建，不能独立编译运行。
 
