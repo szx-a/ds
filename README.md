@@ -135,6 +135,33 @@ cd packages/memory/memory-body-preset   && pnpm exec tsdown
 | `/mount <体id>` | 把体挂到**当前会话** | `/mount physics` |
 | `/unmount <体id>` | 从当前会话卸下（数据保留） | `/unmount code` |
 
+### 记忆写到哪里？（默认写入目标）
+
+最容易踩坑的地方，单独说明。
+
+**默认写入「最近挂载的体」**（即挂载集的第一个）：
+
+- 刚启动、没挂过任何体 → 挂载集 = 配置里的 `defaultBodies`（默认 `[code]`），所以默认写 `code`
+- `/mount physics` → 把 `physics` 插到最前，之后默认写 `physics`
+- 再 `/mount 客户A` → 默认写 `客户A`（最近挂载的优先）
+
+**体必须先存在**：默认目标体（或任何你指定的体）若没创建，`/remember` `/summarize` 会报 `Memory body "xxx" does not exist`，**不会自动创建**。需先到设置页建体，或手动建 `body.json`。
+
+**显式指定体**（绕过默认）：
+
+- `/remember <体id> <内容>` → 存到指定体
+- `/summarize <体id>` → 总结到指定体
+
+**只想用一个体**：`/mount x` 后 `/unmount code`（卸掉默认的 code），挂载集只剩 `[x]`，默认写 `x`。
+
+**举例**：
+
+| 操作 | 之后 `/remember 内容` 存到 |
+|---|---|
+| （无操作） | `code` |
+| `/mount physics` | `physics` |
+| `/mount physics` 后 `/unmount code` | `physics` |
+
 ### 模型工具（自动调用，无需手动）
 
 - `memory_search <关键词>` —— 跨会话回忆，检索挂载的体
