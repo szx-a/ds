@@ -321,7 +321,3 @@ packages/memory/
 ## 许可证
 
 见 [LICENSE](./LICENSE)。
-
-## 标签
-
-建议给仓库加 topic：`dsh-plugin`（官方监控此 topic）、`deepseek-harness`、`memory`、`memory-body`。
