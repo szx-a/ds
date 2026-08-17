@@ -139,28 +139,43 @@ cd packages/memory/memory-body-preset   && pnpm exec tsdown
 
 最容易踩坑的地方，单独说明。
 
-**默认写入「最近挂载的体」**（即挂载集的第一个）：
+**先分清三个动作**：
 
-- 刚启动、没挂过任何体 → 挂载集 = 配置里的 `defaultBodies`（默认 `[code]`），所以默认写 `code`
-- `/mount physics` → 把 `physics` 插到最前，之后默认写 `physics`
-- 再 `/mount 客户A` → 默认写 `客户A`（最近挂载的优先）
+- **建体**（设置页建，或手动建 `body.json`）= 创建，只在磁盘生成一个体，**不等于授权**
+- **挂载**（`/mount`）= 授权，「这个会话能读写这个体」
+- **写入**（`/remember` `/summarize`）= 实际存内容
 
-**体必须先存在**：默认目标体（或任何你指定的体）若没创建，`/remember` `/summarize` 会报 `Memory body "xxx" does not exist`，**不会自动创建**。需先到设置页建体，或手动建 `body.json`。
+只有**挂载**的体才能被写。刚建好的体**不会自动挂载**，要先 `/mount <体id>`。所以「在 GUI 里建了体」之后直接 `/remember` 会报 `No memory body mounted` —— 那不是体不存在，是还没挂载。
 
-**显式指定体**（绕过默认）：
+**挂载是累加，可挂多个**（`/unmount` 只删那一个，不影响其他）：
+
+```
+/mount wd-231567   → [wd-231567]
+/mount code        → [code, wd-231567]        # 后挂的插到最前
+/mount physics     → [physics, code, wd-231567]
+```
+
+**默认写入「最近挂载的体」**（挂载集第一个）：
+
+- 刚启动、没挂过任何体 → 挂载集 = `defaultBodies`（默认 `[code]`），默认写 `code`
+- `/mount physics` → 把 `physics` 插到最前，默认写 `physics`
+
+**体必须先存在**：默认目标体（或任何你指定的体）若没创建，`/remember` `/summarize` 会报 `Memory body "xxx" does not exist`，**不会自动创建**。
+
+**显式指定体**（绕过默认，挂多个时才有意义）：
 
 - `/remember <体id> <内容>` → 存到指定体
 - `/summarize <体id>` → 总结到指定体
 
-**只想用一个体**：`/mount x` 后 `/unmount code`（卸掉默认的 code），挂载集只剩 `[x]`，默认写 `x`。
+> ⚠️ 显式指定的体**也必须已挂载**：`/remember x 内容` 里若 `x` 未挂载，会被当成内容文本存进默认体（或挂载集空时报 `No memory body mounted`）。所以先 `/mount x` 再点名。
 
-**举例**：
+**举例**（挂 `physics` 和 `code` 两个）：
 
-| 操作 | 之后 `/remember 内容` 存到 |
-|---|---|
-| （无操作） | `code` |
-| `/mount physics` | `physics` |
-| `/mount physics` 后 `/unmount code` | `physics` |
+| 操作 | 挂载集 | `/remember 内容` 存到 | `/remember code 内容` 存到 |
+|---|---|---|---|
+| （无操作） | `[code]` | `code` | `code` |
+| `/mount physics` | `[physics, code]` | `physics` | `code` |
+| `/mount physics` 后 `/unmount code` | `[physics]` | `physics` | ❌ code 未挂载 |
 
 ### 模型工具（自动调用，无需手动）
 
