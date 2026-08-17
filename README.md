@@ -55,13 +55,15 @@
   name: '@2464500754/dsh-layered-memory-architecture/memory-store'
   config:
     root: 'F:/dp/memory-body-data'   # ⚠️ 改成你自己的数据目录路径！
-    defaultBodies: [code]
+    defaultBodies: [code]            # 默认挂载的体，可改成自己的（如 [physics]），该体需先创建
 
 - id: memory-body
   name: '@2464500754/dsh-layered-memory-architecture'
 ```
 
-> ⚠️ `root` 是**数据存放目录**，请改成你自己的绝对路径（如 `'D:/ds/memory-data'`）。首次启动会自动建目录。
+> ⚠️ `root` 是**数据存放目录**，请改成你自己的绝对路径（如 `'D:/ds/memory-data'`），首次启动会自动建目录。
+>
+> ⚠️ `defaultBodies` 是**默认挂载清单，不是创建命令**：`code` 只是示例名，可改成任意体 id（如 `[physics]`），但该体**必须先在磁盘上创建**（设置页建，或手动建 `body.json`），否则 `/remember` 会报 `does not exist`。
 
 **3. `apps/cli/config/agent-presets/standard/agent.cordis.yml`** —— 末尾加 1 个 row（preset 平面）：
 
