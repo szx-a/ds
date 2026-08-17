@@ -167,7 +167,7 @@ cd packages/memory/memory-body-preset   && pnpm exec tsdown
 - `/remember <体id> <内容>` → 存到指定体
 - `/summarize <体id>` → 总结到指定体
 
-> ⚠️ 显式指定的体**也必须已挂载**：`/remember x 内容` 里若 `x` 未挂载，会被当成内容文本存进默认体（或挂载集空时报 `No memory body mounted`）。所以先 `/mount x` 再点名。
+> ⚠️ 显式指定的体**也必须已挂载**：`/remember x 内容` 里若 `x` 长得像体 id（全小写字母数字/连字符）却未挂载，会**报错** `Memory body "x" is not mounted`，不会静默当文本。所以先 `/mount x` 再点名。
 
 **举例**（挂 `physics` 和 `code` 两个）：
 
@@ -175,7 +175,7 @@ cd packages/memory/memory-body-preset   && pnpm exec tsdown
 |---|---|---|---|
 | （无操作） | `[code]` | `code` | `code` |
 | `/mount physics` | `[physics, code]` | `physics` | `code` |
-| `/mount physics` 后 `/unmount code` | `[physics]` | `physics` | ❌ code 未挂载 |
+| `/mount physics` 后 `/unmount code` | `[physics]` | `physics` | ❌ 报错 `code` 未挂载 |
 
 ### 模型工具（自动调用，无需手动）
 
