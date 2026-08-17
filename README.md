@@ -201,7 +201,9 @@ cd packages/memory/memory-body-preset   && pnpm exec tsdown
 
 ---
 
-## 架构
+## 架构（LMA — Layered Memory Architecture）
+
+2 个包（host + preset）+ 3 个加载平面：
 
 ```
 ┌─ host 平面（cordis.patch.yml）─────────────────────────────┐
@@ -217,9 +219,35 @@ cd packages/memory/memory-body-preset   && pnpm exec tsdown
 └────────────────────────────────────────────────────────────┘
 ```
 
-- **权威层**：JSONL（append-only，可手改）
+### 服务组件
+
+| 组件 | 形态 | 职责 |
+|---|---|---|
+| `MemoryStore` | Service 类 | 共享存储：JSONL + FTS + 挂载集 |
+| `MemoryBodyService` | TypertRemoteService | 体管理 Remote + 命令注册 |
+| preset 插件 | namespace plugin | 工具 + 自动总结 |
+| client 插件 | 双面 React 插件 | GUI + 自 mount Remote |
+
+### 存储：事件溯源
+
+- **权威层**：JSONL（append-only、可手改、可审计）
 - **读模型**：SQLite FTS5（可丢弃、每次 search 前从 JSONL 重建）
 - **降权不删除**：supersede 追加标记行，同 id 折叠取最新
+- **双权威**：`user`（用户钦定，只读）/ `model`（模型总结，可编辑）
+
+### 挂载机制
+
+- **建体 ≠ 挂载**：建体只是磁盘生成 body.json，挂载才是「授权会话读写」
+- **挂载累加**：`/mount` 插到最前（最近挂载 = 默认写入目标），`/unmount` 只删单个
+- **会话级**：挂载集存进程内存（WeakMap），关会话重开回退默认
+
+### 设计取舍
+
+1. **挂载 vs 全量注入** —— 只加载挂载的体，隔离显式可控
+2. **双权威 vs 混在一起** —— user/model 严格分层
+3. **降权不删除 vs 覆盖** —— 可审计可回滚
+4. **GUI + JSONL 双编辑 vs 黑盒** —— 透明可手改
+5. **事件溯源 vs 单一数据库** —— 索引可重建
 
 ---
 
