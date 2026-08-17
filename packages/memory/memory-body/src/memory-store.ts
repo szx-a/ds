@@ -56,14 +56,14 @@ export class MemoryStore extends Service {
     return overrides === undefined ? this.mountedList : [...overrides]
   }
 
-  /** 把某个体挂到指定会话（首次挂载会先继承默认集）。 */
+  /** 把某个体挂到指定会话，并置为最前（最近挂载的体 = 默认写入目标）。 */
   mount(bodyId: string, owner: SessionOwner): void {
     let overrides = this.sessionMounts.get(owner.session)
     if (overrides === undefined) {
       overrides = new Set(this.mountedList)
-      this.sessionMounts.set(owner.session, overrides)
     }
-    overrides.add(bodyId)
+    // 插到最前：/remember /summarize 默认写 mounted[0]，最近挂载的体自动成为默认写入目标。
+    this.sessionMounts.set(owner.session, new Set([bodyId, ...overrides]))
   }
 
   /** 从指定会话卸下某个体（首次操作会先继承默认集再删，卸空即无挂载）。 */
