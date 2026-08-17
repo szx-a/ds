@@ -3,12 +3,14 @@
  * @module dsh-memory-body/parse
  */
 
+import { BODY_ID } from './store.ts'
+
 export const REMEMBER_USAGE = 'Usage: /remember <内容>  或  /remember <体id> <内容>'
 
 export type ParsedRemember = { bodyId: string; content: string }
 
 /** 无挂载体的统一错误文案。 */
-const NO_MOUNTED = 'No memory body mounted. Configure `defaultBodies` in cordis.yml first.'
+const NO_MOUNTED = 'No memory body mounted. Run /mount <bodyId> first (or configure defaultBodies in cordis.yml).'
 
 /**
  * 解析 /remember 的输入：可选体 id + 必填内容。
@@ -22,6 +24,10 @@ export function parseRemember(rawInput: string, mounted: string[]): ParsedRememb
   if (parts.length === 0 || (parts.length === 1 && first === '')) return REMEMBER_USAGE
   if (parts.length >= 2 && mounted.includes(first)) {
     return { bodyId: first, content: parts.slice(1).join(' ') }
+  }
+  // 第一段长得像体 id（全小写字母数字/连字符）却不在挂载集 → 明确报错，而非静默当文本。
+  if (parts.length >= 2 && BODY_ID.test(first)) {
+    return `Memory body ${JSON.stringify(first)} is not mounted. Run /mount ${first} first.`
   }
   const defaultBody = mounted[0]
   if (defaultBody === undefined) return NO_MOUNTED
