@@ -86,13 +86,14 @@ export function registerRememberTool(ctx: Context, store: MemoryStore): void {
   ctx.tools.register(defineTool({
     name: 'memory_remember',
     description:
-      'Store a durable document or note the user explicitly asked you to remember into a mounted memory body. '
-      + 'Call ONLY when the user clearly asks you to remember/save/store something; never write to memory on your own initiative.',
+      'Store a durable note into a mounted memory body when the user explicitly asks to remember/save/store something. '
+      + 'First resolve what the user actually wants remembered (e.g. "记住之前那篇文档的关键内容" means the document\'s key content), distill it into the actual content, and store THAT — never store the "remember ..." instruction sentence itself. '
+      + 'Never write to memory on your own initiative.',
     parameters: {
       content: {
         type: 'string',
         required: true,
-        description: 'The exact content to remember, in the user\'s own words where possible.',
+        description: 'The actual content to remember — the distilled or verbatim content the user wants kept, NOT the "remember ..." instruction sentence.',
       },
       bodyId: {
         type: 'string',
