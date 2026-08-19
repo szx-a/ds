@@ -198,7 +198,8 @@ cd packages/memory/memory-body-preset   && pnpm exec tsdown
 
 ### GUI
 
-设置页 → 「记忆体」tab：查看体列表、新建体、删除体、查看条目。
+- **设置页 → 「记忆体」tab**：查看体列表、新建体、删除体、查看条目
+- **输入框 dock 挂载标签**：聊天输入框附近实时显示当前会话挂载的记忆体（如「记忆体：code, physics」），`/mount` `/unmount` 后自动刷新
 
 ### 后台编辑
 
