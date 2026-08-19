@@ -7,7 +7,8 @@
   },
   "files": [
     "src/client/index.tsx",
-    "src/client/MemoryBodyTab.tsx"
+    "src/client/MemoryBodyTab.tsx",
+    "src/client/MountedBodiesLine.tsx"
   ],
   "references": [
     {
@@ -30,6 +31,9 @@
     },
     {
       "path": "../../client/ui-settings"
+    },
+    {
+      "path": "../../client/ui-conversation"
     }
   ]
 }

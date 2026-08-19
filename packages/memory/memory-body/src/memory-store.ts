@@ -21,7 +21,7 @@ export interface MemoryStoreConfig {
 
 /** 携带会话身份的调用者（Agent 满足此形状，避免 host 包硬依赖 dsh-agent 类型）。 */
 export interface SessionOwner {
-  readonly session: object
+  readonly session: { readonly id: string }
 }
 
 export class MemoryStore extends Service {
@@ -33,8 +33,8 @@ export class MemoryStore extends Service {
   private readonly root: string
   private readonly fts: MemoryFts
   private readonly mountedList: string[]
-  /** 会话级挂载覆盖（session → 显式挂载集）。进程内存，不持久化：关会话重开即回退默认。 */
-  private readonly sessionMounts = new WeakMap<object, Set<string>>()
+  /** 会话级挂载覆盖（sessionId → 显式挂载集）。进程内存，不持久化：关会话重开即回退默认。 */
+  private readonly sessionMounts = new Map<string, Set<string>>()
 
   constructor(ctx: Context, config: MemoryStoreConfig) {
     super(ctx, 'memoryStore')
@@ -52,26 +52,33 @@ export class MemoryStore extends Service {
   /** 某会话的挂载集：优先取该会话的显式覆盖，否则回退默认集。 */
   mountedFor(owner: SessionOwner | undefined): string[] {
     if (owner === undefined) return this.mountedList
-    const overrides = this.sessionMounts.get(owner.session)
+    return this.mountedForSession(owner.session.id)
+  }
+
+  /** 按 sessionId 查询挂载集（供 Remote 跨 host/client 查询）。 */
+  mountedForSession(sessionId: string): string[] {
+    const overrides = this.sessionMounts.get(sessionId)
     return overrides === undefined ? this.mountedList : [...overrides]
   }
 
   /** 把某个体挂到指定会话，并置为最前（最近挂载的体 = 默认写入目标）。 */
   mount(bodyId: string, owner: SessionOwner): void {
-    let overrides = this.sessionMounts.get(owner.session)
+    const sessionId = owner.session.id
+    let overrides = this.sessionMounts.get(sessionId)
     if (overrides === undefined) {
       overrides = new Set(this.mountedList)
     }
     // 插到最前：/remember /summarize 默认写 mounted[0]，最近挂载的体自动成为默认写入目标。
-    this.sessionMounts.set(owner.session, new Set([bodyId, ...overrides]))
+    this.sessionMounts.set(sessionId, new Set([bodyId, ...overrides]))
   }
 
   /** 从指定会话卸下某个体（首次操作会先继承默认集再删，卸空即无挂载）。 */
   unmount(bodyId: string, owner: SessionOwner): void {
-    let overrides = this.sessionMounts.get(owner.session)
+    const sessionId = owner.session.id
+    let overrides = this.sessionMounts.get(sessionId)
     if (overrides === undefined) {
       overrides = new Set(this.mountedList)
-      this.sessionMounts.set(owner.session, overrides)
+      this.sessionMounts.set(sessionId, overrides)
     }
     overrides.delete(bodyId)
   }

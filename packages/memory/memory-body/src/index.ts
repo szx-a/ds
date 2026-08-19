@@ -82,6 +82,12 @@ export class MemoryBodyService extends TypertRemoteService {
     }
     return result
   }
+
+  /** 列出某会话当前挂载的体 id（供 client 显示挂载状态）。 */
+  @Remote('listMounted')
+  async listMounted(sessionId: string): Promise<string[]> {
+    return this.store.mountedForSession(sessionId)
+  }
 }
 
 export default MemoryBodyService

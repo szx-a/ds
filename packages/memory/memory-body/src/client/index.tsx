@@ -8,9 +8,11 @@
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 import type { TypertRemoteNamespaceMap } from '@deepseek-ai/dsh-typert-protocol'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
+import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import memoryBodyRemote from '@2464500754/dsh-layered-memory-architecture/remote'
 import type {} from '@2464500754/dsh-layered-memory-architecture/remote'
 import { MemoryBodyTab, type BodyRow, type EntryRow, type MemoryBodyTabInjected } from './MemoryBodyTab.tsx'
+import { MountedBodiesLine } from './MountedBodiesLine.tsx'
 
 export const inject = ['slots', 'remote']
 
@@ -52,4 +54,17 @@ export async function apply(ctx: ClientContext): Promise<void> {
     label: () => '记忆体',
     inject: injected,
   }, MemoryBodyTab))
+
+  // 输入框 dock 的挂载状态标签（照官方 StatsLine 的先例）。
+  ctx.slots.inject('conversation.composer.dock', () => ctx.slots.register({
+    name: 'conversation.composer.dock',
+    id: 'memory-mounted',
+    order: 1,
+    inject: (sessionId: string) => ({
+      listMounted: async (): Promise<string[]> => {
+        const r = await remote.listMounted(sessionId)
+        return r.ok ? r.value : []
+      },
+    }),
+  }, MountedBodiesLine))
 }
