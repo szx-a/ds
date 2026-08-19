@@ -171,6 +171,18 @@ cd packages/memory/memory-body-preset   && pnpm exec tsdown
 
 > ⚠️ 显式指定的体**也必须已挂载**：`/remember x 内容` 里若 `x` 长得像体 id（全小写字母数字/连字符）却未挂载，会**报错** `Memory body "x" is not mounted`，不会静默当文本。所以先 `/mount x` 再点名。
 
+**所有操作的默认目标一览**（命令 + 模型工具都遵循同一规则）：
+
+| 操作 | 权威 | 不指定体时的目标 |
+|---|---|---|
+| `/remember` | user | 最近挂载的体（挂载集第一个） |
+| `memory_remember`（模型自动） | user | 最近挂载的体 |
+| `/summarize` | model | 最近挂载的体 |
+| 自动总结 | model | 最近挂载的体 |
+| `memory_search`（模型自动） | — | 搜**所有**挂载的体 |
+
+**核心规则一句话**：所有写入（命令和模型工具）默认写到「**最近挂载的体**」——因为 `/mount` 会把体插到挂载集最前。想写别的体就显式指定体 id。
+
 **举例**（挂 `physics` 和 `code` 两个）：
 
 | 操作 | 挂载集 | `/remember 内容` 存到 | `/remember code 内容` 存到 |
