@@ -6,6 +6,7 @@
  */
 
 import { Service, type Context } from '@deepseek-ai/cordis'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import z from '@deepseek-ai/schemastery'
 import {
@@ -33,14 +34,17 @@ export class MemoryStore extends Service {
   private readonly root: string
   private readonly fts: MemoryFts
   private readonly mountedList: string[]
-  /** 会话级挂载覆盖（sessionId → 显式挂载集）。进程内存，不持久化：关会话重开即回退默认。 */
-  private readonly sessionMounts = new Map<string, Set<string>>()
+  private readonly mountsPath: string
+  /** 会话级挂载覆盖（sessionId → 显式挂载集）。持久化到 mounts.json，会话重启后恢复。 */
+  private readonly sessionMounts: Map<string, Set<string>>
 
   constructor(ctx: Context, config: MemoryStoreConfig) {
     super(ctx, 'memoryStore')
     this.root = resolveRoot(config.root)
     this.fts = new MemoryFts(join(this.root, 'index.sqlite'))
     this.mountedList = config.defaultBodies
+    this.mountsPath = join(this.root, 'mounts.json')
+    this.sessionMounts = this.loadMounts()
     ctx.effect(() => () => this.fts.close(), 'memory-store fts dispose')
   }
 
@@ -70,6 +74,7 @@ export class MemoryStore extends Service {
     }
     // 插到最前：/remember /summarize 默认写 mounted[0]，最近挂载的体自动成为默认写入目标。
     this.sessionMounts.set(sessionId, new Set([bodyId, ...overrides]))
+    this.persistMounts()
   }
 
   /** 从指定会话卸下某个体（首次操作会先继承默认集再删，卸空即无挂载）。 */
@@ -81,6 +86,35 @@ export class MemoryStore extends Service {
       this.sessionMounts.set(sessionId, overrides)
     }
     overrides.delete(bodyId)
+    this.persistMounts()
+  }
+
+  /* ── 挂载持久化 ─────────────────────────────────────────── */
+
+  /** 从 mounts.json 加载会话挂载集（文件不存在或损坏时回退空）。 */
+  private loadMounts(): Map<string, Set<string>> {
+    const result = new Map<string, Set<string>>()
+    try {
+      if (!existsSync(this.mountsPath)) return result
+      const raw = JSON.parse(readFileSync(this.mountsPath, 'utf8')) as Record<string, unknown>
+      for (const [sessionId, bodies] of Object.entries(raw)) {
+        if (Array.isArray(bodies)) {
+          result.set(sessionId, new Set(bodies.filter(b => typeof b === 'string')))
+        }
+      }
+    } catch {
+      // 文件损坏时静默忽略，回退空（下次挂载会重写）。
+    }
+    return result
+  }
+
+  /** 把当前会话挂载集写回 mounts.json（每次挂载/卸载立即落盘）。 */
+  private persistMounts(): void {
+    const raw: Record<string, string[]> = {}
+    for (const [sessionId, set] of this.sessionMounts) {
+      raw[sessionId] = [...set]
+    }
+    writeFileSync(this.mountsPath, JSON.stringify(raw, null, 2) + '\n')
   }
 
   /* ── 体管理 ─────────────────────────────────────────────── */
