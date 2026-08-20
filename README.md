@@ -268,7 +268,7 @@ cd packages/memory/memory-body-preset   && pnpm exec tsdown
 
 ### 设计取舍
 
-1. **挂载 vs 全量注入** —— 只加载挂载的体，隔离显式可控
+1. **隔离在存储层，而非检索层** —— 记忆按体分开存放，挂载圈定范围，从源头不乱炖
 2. **双权威 vs 混在一起** —— user/model 严格分层
 3. **降权不删除 vs 覆盖** —— 可审计可回滚
 4. **GUI + JSONL 双编辑 vs 黑盒** —— 透明可手改
