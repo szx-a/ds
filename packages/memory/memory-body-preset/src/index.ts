@@ -8,7 +8,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import type { MemoryStore } from '@2464500754/dsh-layered-memory-architecture/memory-store'
-import { registerSearchTool, registerRememberTool } from './tool.ts'
+import { registerSearchTool, registerRememberTool, registerForgetTool, registerCorrectTool } from './tool.ts'
 import { registerAutoSummarize } from './auto-summarize.ts'
 
 export const name = 'memory-body-preset'
@@ -27,5 +27,7 @@ export function apply(ctx: Context, config: Config): void {
   const store = ctx.memoryStore as MemoryStore
   registerSearchTool(ctx, store)
   registerRememberTool(ctx, store)
+  registerForgetTool(ctx, store)
+  registerCorrectTool(ctx, store)
   registerAutoSummarize(ctx, store, config.autoSummarize === true)
 }

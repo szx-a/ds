@@ -10,7 +10,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import z from '@deepseek-ai/schemastery'
 import {
-  appendEntry, deleteBody, listBodyIds, readBody, readEntries, retireEntry,
+  appendEntry, deleteBody, listBodyIds, readBody, readEntries, retireEntry, supersedeEntry,
   resolveRoot, writeBody, type MemoryBody, type MemoryEntry,
 } from './store.ts'
 import { MemoryFts, type FtsHit } from './fts.ts'
@@ -147,6 +147,11 @@ export class MemoryStore extends Service {
 
   retireEntry(entry: MemoryEntry): Promise<MemoryEntry> {
     return retireEntry(this.root, entry)
+  }
+
+  /** 纠正：降权旧条目 + 写入纠正后的新条目（出处链可追溯）。 */
+  supersedeEntry(entry: MemoryEntry, newContent: string, authority?: 'user' | 'model'): Promise<MemoryEntry> {
+    return supersedeEntry(this.root, entry, newContent, authority)
   }
 
   /* ── 检索 ───────────────────────────────────────────────── */

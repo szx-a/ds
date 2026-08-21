@@ -138,3 +138,119 @@ export function registerRememberTool(ctx: Context, store: MemoryStore): void {
     presentCall: args => ({ card: 'generic', title: 'Remember', kind: 'other', rawInput: args.content }),
   }))
 }
+
+/** 注册 memory_forget：模型主动降权（标记失效，不删除，可追溯）。 */
+export function registerForgetTool(ctx: Context, store: MemoryStore): void {
+  ctx.tools.register(defineTool({
+    name: 'memory_forget',
+    description:
+      'Mark a stored memory entry as superseded (inactive) so it no longer appears in memory_search. '
+      + 'Call when you notice a stored memory is outdated, wrong, or superseded by newer information. '
+      + 'This does NOT delete the entry — it is kept for auditability and can be undone.',
+    parameters: {
+      query: {
+        type: 'string',
+        required: true,
+        description: 'Keyword matching the memory entry to retire (matches content substring).',
+      },
+      bodyId: {
+        type: 'string',
+        description: 'Optional body id to restrict the search; omit to search all mounted bodies.',
+      },
+    },
+    output: {
+      schema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          retired: { type: 'integer', required: true },
+        },
+      },
+      render: (_args, value) => [{ type: 'text', text: `Retired ${value.retired} memor${value.retired === 1 ? 'y' : 'ies'} (kept in history, not deleted).` }],
+    },
+    async execute(args, exec) {
+      const mountedList = store.mountedFor(exec.agent)
+      if (mountedList.length === 0) {
+        throw new Error('no memory body mounted; configure `defaultBodies` in cordis.yml first')
+      }
+      const targets = args.bodyId !== undefined && args.bodyId !== ''
+        ? (mountedList.includes(args.bodyId) ? [args.bodyId] : [])
+        : mountedList
+      if (targets.length === 0) {
+        throw new Error(`memory body ${JSON.stringify(args.bodyId)} is not mounted`)
+      }
+      const needle = args.query.toLowerCase()
+      let retired = 0
+      for (const bodyId of targets) {
+        const entries = await store.readEntries(bodyId)
+        for (const entry of entries) {
+          if (entry.status === 'active' && entry.weight > 0 && entry.content.toLowerCase().includes(needle)) {
+            await store.retireEntry(entry)
+            retired++
+          }
+        }
+      }
+      return { retired }
+    },
+    presentCall: args => ({ card: 'generic', title: 'Forget memory', kind: 'other', rawInput: args.query }),
+  }))
+}
+
+/** 注册 memory_correct：模型主动纠正（降权旧条目 + 写入纠正内容）。 */
+export function registerCorrectTool(ctx: Context, store: MemoryStore): void {
+  ctx.tools.register(defineTool({
+    name: 'memory_correct',
+    description:
+      'Correct a stored memory that contains outdated or wrong information: mark the old entry superseded and store the corrected content. '
+      + 'Call when you notice a stored memory is wrong and you know the correct version.',
+    parameters: {
+      query: {
+        type: 'string',
+        required: true,
+        description: 'Keyword matching the old (wrong) memory entry.',
+      },
+      content: {
+        type: 'string',
+        required: true,
+        description: 'The corrected content to store.',
+      },
+      bodyId: {
+        type: 'string',
+        description: 'Optional body id; omit to use the first mounted body.',
+      },
+    },
+    output: {
+      schema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          corrected: { type: 'integer', required: true },
+        },
+      },
+      render: (_args, value) => [{ type: 'text', text: `Corrected ${value.corrected} memor${value.corrected === 1 ? 'y' : 'ies'}.` }],
+    },
+    async execute(args, exec) {
+      const mountedList = store.mountedFor(exec.agent)
+      if (mountedList.length === 0) {
+        throw new Error('no memory body mounted; configure `defaultBodies` in cordis.yml first')
+      }
+      const bodyId = args.bodyId !== undefined && args.bodyId !== ''
+        ? args.bodyId
+        : mountedList[0]!
+      if (!mountedList.includes(bodyId)) {
+        throw new Error(`memory body ${JSON.stringify(bodyId)} is not mounted`)
+      }
+      const needle = args.query.toLowerCase()
+      let corrected = 0
+      const entries = await store.readEntries(bodyId)
+      for (const entry of entries) {
+        if (entry.status === 'active' && entry.weight > 0 && entry.content.toLowerCase().includes(needle)) {
+          await store.supersedeEntry(entry, args.content, 'model')
+          corrected++
+        }
+      }
+      return { corrected }
+    },
+    presentCall: args => ({ card: 'generic', title: 'Correct memory', kind: 'other', rawInput: args.content }),
+  }))
+}
