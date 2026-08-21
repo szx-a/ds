@@ -195,6 +195,8 @@ cd packages/memory/memory-body-preset   && pnpm exec tsdown
 
 - `memory_search <关键词>` —— 跨会话回忆，检索挂载的体
 - `memory_remember <内容>` —— 你明确说「记住 xxx」时自动写入
+- `memory_forget <关键词>` —— 模型发现记忆过时/错误时主动降权（标记失效、不删除、可追溯）
+- `memory_correct <关键词> <新内容>` —— 模型主动纠正：降权旧条目 + 写入纠正后的内容
 
 ### GUI
 
@@ -224,7 +226,7 @@ cd packages/memory/memory-body-preset   && pnpm exec tsdown
 │  memory-body    Remote（体管理 GUI）+ /remember 等命令     │
 └────────────────────────────────────────────────────────────┘
 ┌─ agent preset（agent.cordis.yml）──────────────────────────┐
-│  memory-body-preset   工具（memory_search/memory_remember）│
+│  memory-body-preset   工具（search/remember/forget/correct）│
 │                        + 自动总结                          │
 └────────────────────────────────────────────────────────────┘
 ┌─ client（dsh.client + exports["./client"]）────────────────┐
@@ -337,7 +339,7 @@ packages/memory/
 └── memory-body-preset/          # preset 包（-preset 后缀）
     └── src/
         ├── index.ts             # 工具 + 自动总结装配
-        ├── tool.ts              # memory_search / memory_remember
+        ├── tool.ts              # memory_search / remember / forget / correct
         └── auto-summarize.ts    # 自动总结触发
 ```
 
