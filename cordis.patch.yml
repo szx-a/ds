@@ -1,0 +1,16 @@
+# LMA（Layered Memory Architecture）记忆体插件 —— host 平面接入声明
+#
+# 把下面两个 row 加进你部署的 web-app bundle（或对应 bundle）的
+# cordis.patch.yml 即可接入。npm 包名 @szx-a/dsh-layered-memory-architecture。
+#
+# preset 平面（模型工具 memory_search/memory_remember/memory_forget/memory_correct
+# 与自动总结）的接入见 agent.cordis.yml 示例（本仓库也提供）。
+
+- id: memory-store
+  name: '@szx-a/dsh-layered-memory-architecture/memory-store'
+  config:
+    root: 'F:/dp/memory-body-data'   # ⚠️ 改成你自己的数据目录绝对路径
+    defaultBodies: [code]            # 默认挂载的体，可改成自己的（该体需先创建）
+
+- id: memory-body
+  name: '@szx-a/dsh-layered-memory-architecture'

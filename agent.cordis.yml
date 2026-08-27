@@ -1,0 +1,10 @@
+# LMA（Layered Memory Architecture）记忆体插件 —— agent preset 平面接入声明
+#
+# 把下面这个 row 加进你的 agent preset 组合（例如
+# apps/cli/config/agent-presets/standard/agent.cordis.yml 末尾）即可。
+# npm 包名 @szx-a/dsh-layered-memory-architecture-preset。
+
+- id: memory-body-preset
+  name: '@szx-a/dsh-layered-memory-architecture-preset'
+  config:
+    autoSummarize: false
