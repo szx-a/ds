@@ -310,14 +310,25 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 
 ---
 
-## 已知限制
+## 测试与后续开发
+
+### 已知限制
 
 1. **检索最短 3 字符**：trigram 天生不支持 2 字及以下的搜索（`中文` 返回空）
-2. **挂载是会话临时**（方案 A）：关会话重开回退全局默认，未做持久化
-3. **未发布 npm**：依赖版本对齐（rc.5 vs rc.6）未完成
-4. **无单元测试**：`store.ts` / `fts.ts` 是纯函数，尚未补测试
-5. **自动总结默认关**：`autoSummarize: false`，需手动开启
-6. **安装门槛**：npm 安装仍需手动改 2 个接入文件（cordis.patch.yml / agent.cordis.yml），未接入一键安装通道
+2. **自动总结默认关**：`autoSummarize: false`，需手动开启
+3. **安装门槛**：npm 安装仍需手动改 2 个接入文件（cordis.patch.yml / agent.cordis.yml），未接入一键安装通道
+
+### 测试
+
+- **单元测试未补**：`store.ts` / `fts.ts` / `parse.ts` 是纯函数，尚未补测试
+
+### 后续开发（按优先级）
+
+1. **记忆提供者接口**：让第三方记忆插件（dsh-memory-evolve / EchoCore 等）挂 LMA 之上，PLM「地基插件」定位验证点
+2. **挂载体元信息注入**：模型只加载已挂载体的 `id + 描述`
+3. **量化对比数据**：benchmark（token 节省量、检索命中率）
+4. **向量检索**：`BodyKind` 已预留 `vector` 扩展位，混合检索
+5. **权重自然衰减**：`weight` 字段支持记忆自然衰减
 
 ---
 
