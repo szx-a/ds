@@ -35,7 +35,7 @@
 
 ### 前置：版本对齐（重要）
 
-当前基于 workspace `0.1.0-rc.5` 开发，npm 官方最新为 `0.1.0-rc.6`。发布/分发前需先 `git pull` 同步官方到 `rc.6` 并重新构建验证。
+当前基于 dsh `0.1.1-rc.2`（插件 version 同为 `0.1.1-rc.2`），已发布到 npm。
 
 ### 方式一：手动接入（当前可用的方式）
 
@@ -44,21 +44,21 @@
 **1. `packages/bundle/web-app/package.json`** —— `dependencies` 加 2 行：
 
 ```json
-"@2464500754/dsh-layered-memory-architecture": "workspace:^",
-"@2464500754/dsh-layered-memory-architecture-preset": "workspace:^"
+"@szx-a/dsh-layered-memory-architecture": "workspace:^",
+"@szx-a/dsh-layered-memory-architecture-preset": "workspace:^"
 ```
 
 **2. `packages/bundle/web-app/cordis.patch.yml`** —— 加 2 个 row（host 平面）：
 
 ```yaml
 - id: memory-store
-  name: '@2464500754/dsh-layered-memory-architecture/memory-store'
+  name: '@szx-a/dsh-layered-memory-architecture/memory-store'
   config:
     root: 'F:/dp/memory-body-data'   # ⚠️ 改成你自己的数据目录路径！
     defaultBodies: [code]            # 默认挂载的体，可改成自己的（如 [physics]），该体需先创建
 
 - id: memory-body
-  name: '@2464500754/dsh-layered-memory-architecture'
+  name: '@szx-a/dsh-layered-memory-architecture'
 ```
 
 > ⚠️ `root` 是**数据存放目录**，请改成你自己的绝对路径（如 `'D:/ds/memory-data'`），首次启动会自动建目录。
@@ -69,7 +69,7 @@
 
 ```yaml
 - id: memory-body-preset
-  name: '@2464500754/dsh-layered-memory-architecture-preset'
+  name: '@szx-a/dsh-layered-memory-architecture-preset'
   config:
     autoSummarize: false
 ```
@@ -113,14 +113,25 @@ cd packages/memory/memory-body-preset   && pnpm exec tsdown
 
 > ⚠️ 本仓库是**源码存档**，不含 `lib/` 构建产物，且依赖 harness monorepo 的 `@deepseek-ai/*` 包 —— 必须放进 harness 源码树内构建，不能独立编译运行。
 
-### 方式二：npm 安装（规划中）
+### 方式二：npm 安装（推荐）
 
-两个包已具备标准 npm 包结构（`@2464500754/dsh-layered-memory-architecture` + `-preset`）。发布前需：
+已发布到 npm（`@szx-a/dsh-layered-memory-architecture@0.1.1-rc.2` + `-preset`），适合**不想放源码、不想自己构建**的情况（npm 包已含编译好的 `lib/` 产物和类型声明）。
 
-1. `git pull` 同步到 `rc.6` 并重新构建验证
-2. 把 `peerDependencies` 的 `workspace:^` 换成 npm 真实版本（`@deepseek-ai/cordis` → `^4.0.1`，`dsh-*` → `^0.1.0-rc.6`）
-3. `pnpm publish` 两个包
-4. 提交到社区市场（`dshmarket` / `awesome-deepseek-harness`）
+**1. 安装两个包**（装到 web-app bundle）：
+
+```bash
+pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architecture @szx-a/dsh-layered-memory-architecture-preset
+```
+
+**2. 改 `packages/bundle/web-app/cordis.patch.yml`**（同方式一第 2 步）：加 `memory-store` + `memory-body` 两个 row。
+
+**3. 改 `apps/cli/config/agent-presets/standard/agent.cordis.yml`**（同方式一第 3 步）：加 `memory-body-preset` row。
+
+**4. 重启**：`Ctrl+C` 停掉 `pnpm dsh web` 再重启。
+
+**5. 初始化体**（同方式一第 10 步）。
+
+> npm 安装**省掉了**方式一的第 1、4、5、6~7、8 步：不用手动加 web-app 依赖（`pnpm add` 自动写）、不用改 tsconfig、不用放源码、不用构建。
 
 ---
 
@@ -306,7 +317,7 @@ cd packages/memory/memory-body-preset   && pnpm exec tsdown
 3. **未发布 npm**：依赖版本对齐（rc.5 vs rc.6）未完成
 4. **无单元测试**：`store.ts` / `fts.ts` 是纯函数，尚未补测试
 5. **自动总结默认关**：`autoSummarize: false`，需手动开启
-6. **安装门槛**：手动接入需改 5 个官方文件，未接入一键安装通道
+6. **安装门槛**：npm 安装仍需手动改 2 个接入文件（cordis.patch.yml / agent.cordis.yml），未接入一键安装通道
 
 ---
 
@@ -314,11 +325,10 @@ cd packages/memory/memory-body-preset   && pnpm exec tsdown
 
 | 项 | 值 |
 |---|---|
-| workspace 版本 | `0.1.0-rc.5` |
-| npm 官方最新 | `0.1.0-rc.6` |
-| 发布前动作 | `git pull` 同步 rc.6 → 重新构建 → 改 `peerDependencies` |
-
-⚠️ npm 上 **没有 `0.1.0-rc.5`**（官方是 rc.2 → rc.3 → rc.6），`workspace:^` 若原样发布会导致依赖解析失败。
+| dsh 版本 | `0.1.1-rc.2` |
+| 插件 version | `0.1.1-rc.2` |
+| npm 包 | `@szx-a/dsh-layered-memory-architecture` + `-preset` |
+| peerDependencies | 发布时由 `pnpm publish` 自动替换 `workspace:^` → `^0.1.1-rc.2` |
 
 ---
 
@@ -326,7 +336,7 @@ cd packages/memory/memory-body-preset   && pnpm exec tsdown
 
 ```
 packages/memory/
-├── memory-body/                 # host 包 @2464500754/dsh-layered-memory-architecture
+├── memory-body/                 # host 包 @szx-a/dsh-layered-memory-architecture
 │   └── src/
 │       ├── index.ts             # MemoryBodyService（Remote + 命令注册）
 │       ├── memory-store.ts      # MemoryStore（共享存储服务）
