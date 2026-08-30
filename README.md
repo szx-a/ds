@@ -341,6 +341,12 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 | npm 包 | `@szx-a/dsh-layered-memory-architecture` + `-preset` |
 | peerDependencies | 发布时由 `pnpm publish` 自动替换 `workspace:^` → `^0.1.1-rc.2` |
 
+### 兼容性说明
+
+- **当前稳定支持**：dsh `v0.1.1-rc.2`
+- **`v0.1.2-alpha.1` 尚未适配**：官方正在进行重大重构（agent-presets 目录迁移、`client/runtime` 改名 `client/store`、ApiProxy 移除），且 alpha 阶段官方自身也在剧烈变动。作者已用 worktree 副本实测验证了破坏点：Remote 层 `ctx.remote.$mount` 未变，主要受影响的是 `@deepseek-ai/dsh-client-runtime` → 新包。
+- **作者立场**：作为 LMA 的作者/维护者，会跟进官方版本演进，**等 `0.1.2` 出 rc 稳定版后及时适配并发布新版本**（通过 npm 和本仓库同步更新）。如果你已升级到新版本导致插件不可用，请先回退到 `v0.1.1-rc.2`，或关注本仓库的后续更新。
+
 ---
 
 ## 目录结构
