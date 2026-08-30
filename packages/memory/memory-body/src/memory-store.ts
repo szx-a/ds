@@ -2,7 +2,7 @@
  * MemoryStore：host 平面的共享存储服务，封装 root + FTS + 存储操作。
  * Remote（体管理）与 preset 包的命令/工具都 inject 它，共享同一份存储。
  *
- * @module @2464500754/dsh-layered-memory-architecture/memory-store
+ * @module @szx-a/dsh-layered-memory-architecture/memory-store
  */
 
 import { Service, type Context } from '@deepseek-ai/cordis'

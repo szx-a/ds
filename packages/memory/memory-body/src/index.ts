@@ -6,7 +6,7 @@
  * 命令（/remember 等）在 host 平面注册（照 command-goal 先例）；工具在 preset 包。
  * 存储统一走 MemoryStore（host 平面共享服务），本服务只做 RPC + 命令。
  *
- * @module @2464500754/dsh-layered-memory-architecture
+ * @module @szx-a/dsh-layered-memory-architecture
  */
 
 import type { Context } from '@deepseek-ai/cordis'

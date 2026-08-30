@@ -131,31 +131,31 @@ export function registerCommands(ctx: Context, store: MemoryStore): void {
       name: 'remember',
       description: 'Store a durable document/note into a mounted memory body',
       input: { hint: '内容（可先写体 id 再写内容）' },
-      handler: (invocation) => executeRemember(ctx, store, invocation),
+      handler: invocation => executeRemember(ctx, store, invocation),
     })
     yield ctx.commands.register({
       name: 'summarize',
       description: 'Summarize the current conversation into a mounted memory body',
       input: { hint: '可选体 id（留空用默认体）' },
-      handler: (invocation) => executeSummarize(ctx, store, invocation),
+      handler: invocation => executeSummarize(ctx, store, invocation),
     })
     yield ctx.commands.register({
       name: 'forget',
       description: 'Retire a memory entry matching a keyword (mark superseded, not deleted)',
       input: { hint: '关键词' },
-      handler: (invocation) => executeForget(store, invocation),
+      handler: invocation => executeForget(store, invocation),
     })
     yield ctx.commands.register({
       name: 'mount',
       description: 'Mount a memory body into the current session (visible to memory_search)',
       input: { hint: '体 id' },
-      handler: (invocation) => executeMount(store, invocation),
+      handler: invocation => executeMount(store, invocation),
     })
     yield ctx.commands.register({
       name: 'unmount',
       description: 'Unmount a memory body from the current session (data kept, just not searched)',
       input: { hint: '体 id' },
-      handler: (invocation) => executeUnmount(store, invocation),
+      handler: invocation => executeUnmount(store, invocation),
     })
   }, 'memory-body commands lifecycle')
 }

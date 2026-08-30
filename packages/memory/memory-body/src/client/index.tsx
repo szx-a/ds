@@ -9,8 +9,8 @@ import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 import type { TypertRemoteNamespaceMap } from '@deepseek-ai/dsh-typert-protocol'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
-import memoryBodyRemote from '@2464500754/dsh-layered-memory-architecture/remote'
-import type {} from '@2464500754/dsh-layered-memory-architecture/remote'
+import memoryBodyRemote from '@szx-a/dsh-layered-memory-architecture/remote'
+import type {} from '@szx-a/dsh-layered-memory-architecture/remote'
 import { MemoryBodyTab, type BodyRow, type EntryRow, type MemoryBodyTabInjected } from './MemoryBodyTab.tsx'
 import { MountedBodiesLine } from './MountedBodiesLine.tsx'
 
@@ -35,7 +35,7 @@ export async function apply(ctx: ClientContext): Promise<void> {
       if (!r.ok) throw new Error(`createBody failed: ${r.error.code}: ${r.error.message}`)
       return r.value
     },
-    removeBody: async bodyId => {
+    removeBody: async (bodyId) => {
       const r = await remote.removeBody(bodyId)
       if (!r.ok) throw new Error(`removeBody failed: ${r.error.code}: ${r.error.message}`)
       return r.value

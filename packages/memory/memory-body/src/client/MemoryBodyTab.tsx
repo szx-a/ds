@@ -69,7 +69,7 @@ export function MemoryBodyTab(props: MemoryBodyTabInjected): ReactNode {
   const remove = (bodyId: string): void => {
     void removeBody(bodyId).then(
       () => {
-        setEntries(prev => { const next = { ...prev }; delete next[bodyId]; return next })
+        setEntries((prev) => { const next = { ...prev }; delete next[bodyId]; return next })
         if (expanded === bodyId) setExpanded(null)
         reload()
       },

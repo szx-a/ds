@@ -2,12 +2,12 @@
  * preset 侧工具：memory_search（检索）与 memory_remember（模型主动写入）。
  * 通过 host 平面的 MemoryStore 访问存储；权限边界只限挂载集内的体。
  *
- * @module @2464500754/dsh-layered-memory-architecture-preset/tool
+ * @module @szx-a/dsh-layered-memory-architecture-preset/tool
  */
 
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
-import type { MemoryStore } from '@2464500754/dsh-layered-memory-architecture/memory-store'
+import type { MemoryStore } from '@szx-a/dsh-layered-memory-architecture/memory-store'
 
 const MAX_HITS = 5
 
@@ -124,7 +124,9 @@ export function registerRememberTool(ctx: Context, store: MemoryStore): void {
         }
         bodyId = args.bodyId
       } else {
-        bodyId = mountedList[0]!
+        const first = mountedList[0]
+        if (first === undefined) throw new Error('no memory body mounted')
+        bodyId = first
       }
       const entry = await store.appendEntry({
         bodyId,
@@ -236,7 +238,8 @@ export function registerCorrectTool(ctx: Context, store: MemoryStore): void {
       }
       const bodyId = args.bodyId !== undefined && args.bodyId !== ''
         ? args.bodyId
-        : mountedList[0]!
+        : mountedList[0]
+      if (bodyId === undefined) throw new Error('no memory body mounted')
       if (!mountedList.includes(bodyId)) {
         throw new Error(`memory body ${JSON.stringify(bodyId)} is not mounted`)
       }

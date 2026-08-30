@@ -1,7 +1,7 @@
 {
-  "name": "@2464500754/dsh-layered-memory-architecture-preset",
+  "name": "@szx-a/dsh-layered-memory-architecture-preset",
   "description": "记忆体 preset 侧：模型面向的工具（memory_search/memory_remember）与自动总结",
-  "version": "0.1.0-rc.5",
+  "version": "0.1.1-rc.2",
   "publishConfig": {
     "access": "public"
   },
@@ -32,7 +32,7 @@
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-agent": "workspace:^",
     "@deepseek-ai/schemastery": "workspace:^",
-    "@2464500754/dsh-layered-memory-architecture": "workspace:^"
+    "@szx-a/dsh-layered-memory-architecture": "workspace:^"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "workspace:^",
@@ -40,7 +40,7 @@
     "@deepseek-ai/dsh-llm": "workspace:^",
     "@deepseek-ai/dsh-agent": "workspace:^",
     "@deepseek-ai/schemastery": "workspace:^",
-    "@2464500754/dsh-layered-memory-architecture": "workspace:^",
+    "@szx-a/dsh-layered-memory-architecture": "workspace:^",
     "tsdown": "^0.22.2",
     "typescript": "^6.0.3"
   }

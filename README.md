@@ -298,6 +298,7 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 3. 修 client 插件自 mount Remote（第三方包不在 api-remotes 白名单）
 4. 加会话级挂载（`/mount` `/unmount`）
 5. FTS5 分词器 unicode61 → trigram（修中文检索）
+6. 在 worktree 副本完成 `v0.1.2-alpha.1` 适配并验证完整跑通（9 处改动，构建 0 错误，`dsh web` 干净启动，挂载标签实时刷新已恢复）—— 正式发布待 rc
 
 ### 关键踩坑（已固化到 `RECOVERY.md`）
 
@@ -345,24 +346,39 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 
 **当前稳定支持**：dsh `v0.1.1-rc.2`（npm 包 `@szx-a/dsh-layered-memory-architecture@0.1.1-rc.2` + `-preset`）。
 
-**`v0.1.2-alpha.1` 兼容性状态**：官方正在进行重大重构，作者已用 worktree 副本实测确认了破坏点：
+**`v0.1.2-alpha.1` 兼容性状态**：官方正在进行重大重构。作者已在 worktree 副本（隔离环境，主目录 3080 全程不动）完成适配并**验证可完整跑通、功能不降级**——9 处改动、host/preset/client 三侧构建 0 错误、`dsh web` 干净启动、挂载标签实时刷新已恢复。破坏点与实测结论：
 
 | 破坏点 | 影响 LMA 的 | 实测结论 |
 |---|---|---|
 | agent-presets 目录迁移（`apps/cli/config` → `packages/preset`） | preset 接入点 | memory-body-preset row 需搬到新位置 |
-| `client/runtime` 改名 `client/store` | client 插件依赖 | `@deepseek-ai/dsh-client-runtime` 需改成新包 |
-| ApiProxy 移除 | Remote 层 | ✅ `ctx.remote.$mount` 未变，**零改动** |
+| `@deepseek-ai/dsh-client-runtime` 被拆散 | client 插件依赖 | `ClientContext` → cordis `Context`；`ConversationSnapshot.chat.legacy.nodes` → chat 包的 `ChatSnapshot.legacy.nodes`；store 引擎 → `dsh-client-store`。共 9 处改动，详见下方适配步骤 |
+| ApiProxy 移除 | Remote 层 | ✅ `ctx.remote.$mount` / `TypertRemoteNamespaceMap` 未变，**零改动** |
 
-**作者立场**：作为 LMA 的作者/维护者，会跟进官方版本演进，**等 `0.1.2` 出 rc 稳定版后第一时间适配并发布新版本**。alpha 阶段官方自身也在剧烈变动（官方自己的 ui-settings / api-remotes 都还在报错），此时适配会反复返工，故待稳定后一次到位。
+**作者立场**：作为 LMA 的作者/维护者，会跟进官方版本演进，**等 `0.1.2` 出 rc 稳定版后第一时间适配并发布新版本**。虽然 alpha.1 已在副本跑通，但官方 alpha 仍落后 rc.2 约 1079 提交、`runtime→store` 重构仍在变动（`ChatSnapshot.legacy.nodes` 的 `legacy` 字段名暗示官方可能在 rc 前改名），此时发布会反复返工，故待稳定后一次到位。
 
 ### LMA 适配新版本的步骤（供先行者自担风险参考）
 
+> 完整教程级手册（具体到每个文件、行号、前后代码）见本仓库外的《LMA-适配手册》。这里列要点。
+
+**A. 接入点（同 0.1.1-rc.2，只改路径）**
+
 1. **host 接入**：`packages/bundle/web-app/cordis.patch.yml` 的 `plugin-inventory` 后，加 `memory-store` + `memory-body` 两个 row
-2. **preset 接入**：`packages/preset/agent-presets/presets/standard/agent.cordis.yml` 末尾，加 `memory-body-preset` row
+2. **preset 接入**：`packages/preset/agent-presets/presets/standard/agent.cordis.yml`（⚠️ 0.1.2 新路径）末尾，加 `memory-body-preset` row
 3. **依赖**：`packages/bundle/web-app/package.json` 加 2 个 `@szx-a/...` 依赖
 4. **references**：`tsconfig.host.json` / `tsconfig.client.json` 加 memory references
-5. **改 client 依赖**：`dsh.client.inject` 与 tsconfig 里的 `@deepseek-ai/dsh-client-runtime` → 新包名（`client/store` 重构）
-6. **验证**：`tsc` 编译 + `pnpm dsh web --no-open --port 0` 启动（看 SQLite warning、无 pending）
+
+**B. client 源码改动（`@deepseek-ai/dsh-client-runtime` 被拆散导致，共 6 处）**
+
+5. `src/client/index.tsx`：`ClientContext` import 从 `dsh-client-runtime/client` → `@deepseek-ai/cordis` 的 `Context`
+6. `src/client/MountedBodiesLine.tsx`：`ConversationSnapshot` import 换成 chat 包的 `ChatSnapshot`；实时刷新信号从 `useSession(s => s.chat.legacy.nodes)` 换成 `useChat(s => s.legacy.nodes)`（照官方 `StatsLine` 先例，功能不降级）
+7. `package.json`：删 3 处 `dsh-client-runtime`（inject 数组 / peerDeps / devDeps），**新增** `@deepseek-ai/dsh-client-ui-chat`（inject 数组 / peerDeps / devDeps 三处）
+8. `tsconfig.client.json`：删 `client/runtime` reference，**新增** `client/ui-chat` reference
+9. `src/client/index.tsx`：补 2 个空 import `@deepseek-ai/dsh-api-remotes/client`（ctx.remote 类型）+ `@deepseek-ai/dsh-client-ui-renderer/client`（ctx.slots 类型）；`conversation.composer.dock` slot 的 inject factory 参数去掉 `: string`、用 `String(sessionId)` 转换
+
+**C. 构建 + 验证（⚠️ 关键：必须跑 host + client 两个 face）**
+
+10. **构建**：`pnpm install` → `pnpm run build:lib:host` → `pnpm run build:lib:client`。只跑 host face 会让 `dsh web` 报 `MissingClientBundleError`（缺全图 `lib/client.js`）
+11. **验证**：`pnpm dsh web --no-open --port 0` 启动（看 SQLite warning、无 pending、无 MissingClientBundleError；HTTP 探测返回 401 即确认监听）
 
 ---
 
