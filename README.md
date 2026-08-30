@@ -354,7 +354,7 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 | `@deepseek-ai/dsh-client-runtime` 被拆散 | client 插件依赖 | `ClientContext` → cordis `Context`；`ConversationSnapshot.chat.legacy.nodes` → chat 包的 `ChatSnapshot.legacy.nodes`；store 引擎 → `dsh-client-store`。共 9 处改动，详见下方适配步骤 |
 | ApiProxy 移除 | Remote 层 | ✅ `ctx.remote.$mount` / `TypertRemoteNamespaceMap` 未变，**零改动** |
 
-**作者立场**：作为 LMA 的作者/维护者，会跟进官方版本演进，**等 `0.1.2` 出 rc 稳定版后第一时间适配并发布新版本**。虽然 alpha.1 已在副本跑通，但官方 alpha 仍落后 rc.2 约 1079 提交、`runtime→store` 重构仍在变动（`ChatSnapshot.legacy.nodes` 的 `legacy` 字段名暗示官方可能在 rc 前改名），此时发布会反复返工，故待稳定后一次到位。
+**作者立场**：作为 LMA 的作者/维护者，会跟进官方版本演进，**等 `0.1.2` 出 rc 稳定版后第一时间适配并发布新版本**。虽然 alpha.1 已在副本跑通，但官方 alpha未稳定、`runtime→store` 重构仍在变动（`ChatSnapshot.legacy.nodes` 的 `legacy` 字段名暗示官方可能在 rc 前改名），此时发布会反复返工，故待稳定后一次到位。
 
 ### LMA 适配新版本的步骤（供先行者自担风险参考）
 
