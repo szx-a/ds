@@ -359,27 +359,133 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 
 ### LMA 适配新版本的步骤（供先行者自担风险参考）
 
+> 教程级清单，具体到文件 + 行 + 前后代码。完整版（含报错现象、踩坑、回滚）见本地《LMA-适配手册》。实测 alpha.1→alpha.4 这 9 处改动原样成立、零改动。
 
+**A. 接入点（4 处，路径变化）**
 
-**A. 接入点（同 0.1.1-rc.2，只改路径）**
+**1. host 接入** — `packages/bundle/web-app/cordis.patch.yml`，在 `plugin-inventory` row 后加：
 
-1. **host 接入**：`packages/bundle/web-app/cordis.patch.yml` 的 `plugin-inventory` 后，加 `memory-store` + `memory-body` 两个 row
-2. **preset 接入**：`packages/preset/agent-presets/presets/standard/agent.cordis.yml`（⚠️ 0.1.2 新路径）末尾，加 `memory-body-preset` row
-3. **依赖**：`packages/bundle/web-app/package.json` 加 2 个 `@szx-a/...` 依赖
-4. **references**：`tsconfig.host.json` / `tsconfig.client.json` 加 memory references
+```yaml
+    # LMA 记忆体：共享存储服务 + Remote（体管理 GUI）+ 命令
+    - id: memory-store
+      name: '@szx-a/dsh-layered-memory-architecture/memory-store'
+      config:
+        root: 'F:/dp/memory-body-data'   # ⚠️ 改成你自己的数据目录
+        defaultBodies: [code]
 
-**B. client 源码改动（`@deepseek-ai/dsh-client-runtime` 被拆散导致，共 6 处）**
+    - id: memory-body
+      name: '@szx-a/dsh-layered-memory-architecture'
+```
 
-5. `src/client/index.tsx`：`ClientContext` import 从 `dsh-client-runtime/client` → `@deepseek-ai/cordis` 的 `Context`
-6. `src/client/MountedBodiesLine.tsx`：`ConversationSnapshot` import 换成 chat 包的 `ChatSnapshot`；实时刷新信号从 `useSession(s => s.chat.legacy.nodes)` 换成 `useChat(s => s.legacy.nodes)`（照官方 `StatsLine` 先例，功能不降级）
-7. `package.json`：删 3 处 `dsh-client-runtime`（inject 数组 / peerDeps / devDeps），**新增** `@deepseek-ai/dsh-client-ui-chat`（inject 数组 / peerDeps / devDeps 三处）
-8. `tsconfig.client.json`：删 `client/runtime` reference，**新增** `client/ui-chat` reference
-9. `src/client/index.tsx`：补 2 个空 import `@deepseek-ai/dsh-api-remotes/client`（ctx.remote 类型）+ `@deepseek-ai/dsh-client-ui-renderer/client`（ctx.slots 类型）；`conversation.composer.dock` slot 的 inject factory 参数去掉 `: string`、用 `String(sessionId)` 转换
+**2. preset 接入** — `packages/preset/agent-presets/presets/standard/agent.cordis.yml`（⚠️ 0.1.2 新路径，旧版在 `apps/cli/config/agent-presets/standard/`），末尾加：
 
-**C. 构建 + 验证（⚠️ 关键：必须跑 host + client 两个 face）**
+```yaml
+# LMA 记忆体：模型面向的工具 + 自动总结
+- id: memory-body-preset
+  name: '@szx-a/dsh-layered-memory-architecture-preset'
+  config:
+    autoSummarize: false
+```
 
-10. **构建**：`pnpm install` → `pnpm run build:lib:host` → `pnpm run build:lib:client`。只跑 host face 会让 `dsh web` 报 `MissingClientBundleError`（缺全图 `lib/client.js`）
-11. **验证**：`pnpm dsh web --no-open --port 0` 启动（看 SQLite warning、无 pending、无 MissingClientBundleError；HTTP 探测返回 401 即确认监听）
+**3. 依赖** — `packages/bundle/web-app/package.json` 的 `dependencies` 加 2 行：
+
+```json
+"@szx-a/dsh-layered-memory-architecture": "workspace:^",
+"@szx-a/dsh-layered-memory-architecture-preset": "workspace:^"
+```
+
+**4. references** — `tsconfig.host.json` 的 `references` 加：
+
+```json
+{ "path": "./packages/memory/memory-body/tsconfig.host.json" },
+{ "path": "./packages/memory/memory-body-preset" }
+```
+
+`tsconfig.client.json` 的 `references` 加：
+
+```json
+{ "path": "./packages/memory/memory-body/tsconfig.client.json" }
+```
+
+**B. client 源码改动（`@deepseek-ai/dsh-client-runtime` 被拆散导致，5 处）**
+
+**5. `src/client/index.tsx` 第 8 行** — `ClientContext` 换包：
+
+```ts
+// 旧
+import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+// 新
+import type { Context as ClientContext } from '@deepseek-ai/cordis'
+```
+
+**6. `src/client/MountedBodiesLine.tsx` 第 2-3 行** — import 换成 `ChatSnapshot`：
+
+```ts
+// 旧
+import type { ConversationSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
+// 新
+import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'   // SnapshotSelectorHook 仍在 ui-slots
+import type { ChatSnapshot } from '@deepseek-ai/dsh-client-ui-chat/client'     // 消息节点在 ChatSnapshot.legacy.nodes
+```
+
+**7. `package.json`** — 删 3 处 `dsh-client-runtime`，新增 `ui-chat`：
+
+```jsonc
+// dsh.client.inject 数组：删 "@deepseek-ai/dsh-client-runtime"，加
+"@deepseek-ai/dsh-client-ui-chat"
+
+// peerDependencies / devDependencies：删 "@deepseek-ai/dsh-client-runtime": "workspace:^"，加
+"@deepseek-ai/dsh-client-ui-chat": "workspace:^"
+```
+
+> 我们 LMA 没直接用 store 引擎，删掉 runtime 即可，无需加 `@deepseek-ai/dsh-client-store`。
+
+**8. `tsconfig.client.json`** — 删 `client/runtime` reference，加：
+
+```json
+{ "path": "../../client/ui-chat" }
+```
+
+**9. `src/client/index.tsx`** — 补 2 个空 import + slot 参数类型：
+
+```ts
+// 顶部补（提供 client 服务类型声明）
+import type {} from '@deepseek-ai/dsh-api-remotes/client'        // ctx.remote 类型
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'  // ctx.slots 类型
+
+// conversation.composer.dock slot 的 inject factory（第 63、65 行）
+// 旧
+inject: (sessionId: string) => ({
+  listMounted: async (): Promise<string[]> => {
+    const r = await remote.listMounted(sessionId)
+    return r.ok ? r.value : []
+  },
+}),
+// 新（去掉 `: string` 注解，用 String() 转换 branded 类型 SessionIdOf）
+inject: (sessionId) => ({
+  listMounted: async (): Promise<string[]> => {
+    const r = await remote.listMounted(String(sessionId))
+    return r.ok ? r.value : []
+  },
+}),
+```
+
+> 实时刷新信号也已恢复：`MountedBodiesLine` 里 `useSession(s => s.chat.legacy.nodes.length)` → `useChat(s => s.legacy.nodes.length)`（照官方 `StatsLine` 先例，`useChat` 由 ui-chat merge 进 `SessionStandardProps`，session 作用域 slot 组件自动获得）。
+
+**C. 构建 + 验证（⚠️ 关键教训）**
+
+```bash
+pnpm run clean                 # 更新版本后必先清旧 lib 产物，否则假 MISSING_EXPORT
+pnpm install                   # 链接新依赖
+pnpm run build:lib:host        # = tsc -b tsconfig.host.json && tsdown --env.DSH_BUILD_FACE host
+pnpm run build:lib:client      # = tsc -b tsconfig.client.json && tsdown --env.DSH_BUILD_FACE client
+pnpm dsh web --no-open --port 0
+```
+
+- **必须跑 host + client 两个 face**：只跑 host face 会让 `dsh web` 报 `MissingClientBundleError`（缺全图 `lib/client.js`）。
+- **通过标准**：打印 URL + `ExperimentalWarning: SQLite`，无 `pending`、无 `typert manifest`、无 `MissingClientBundleError`；HTTP 探测返回 401 即确认监听。
+- **编译错误先分真假**：`Cannot find module .../remote`、`MISSING_EXPORT` 类报错，多数是「依赖产物没构建 / 旧 lib 残留」，先 clean + 全量构建，剩下的才是真 API 变化，**别急着改好代码**。
 
 ---
 
