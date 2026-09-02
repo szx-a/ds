@@ -359,7 +359,7 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 
 ### LMA 适配新版本的步骤（供先行者自担风险参考）
 
-> 教程级清单，具体到文件 + 行 + 前后代码。完整版（含报错现象、踩坑、回滚）见本地《LMA-适配手册》。实测 alpha.1→alpha.4 这 9 处改动原样成立、零改动。
+> 教程级清单，具体到文件 + 行 + 前后代码。实测 alpha.1→alpha.4 这 9 处改动原样成立、零改动。
 
 **A. 接入点（4 处，路径变化）**
 
