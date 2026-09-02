@@ -385,6 +385,8 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 
 ## 目录结构
 
+### LMA 源码（两个版本相同，官方从未改动）
+
 ```
 packages/memory/
 ├── memory-body/                 # host 包 @szx-a/dsh-layered-memory-architecture
@@ -403,6 +405,19 @@ packages/memory/
         ├── tool.ts              # memory_search / remember / forget / correct
         └── auto-summarize.ts    # 自动总结触发
 ```
+
+> LMA 自己的源码目录在 0.1.1-rc.2 和 0.1.2 里**完全一致**——官方重构从没碰过 `packages/memory/`（实测 alpha.1→alpha.4 共 648 个提交，对 `packages/memory/` 零改动）。变的是下面的**接入点**。
+
+### 接入点目录（dsh 版本不同，路径不同）
+
+| 接入点 | 0.1.1-rc.2（旧） | 0.1.2（新） |
+|---|---|---|
+| host 行（memory-store / memory-body） | `packages/bundle/web-app/cordis.patch.yml` | `packages/bundle/web-app/cordis.patch.yml`（不变） |
+| preset 行（memory-body-preset） | `apps/cli/config/agent-presets/standard/agent.cordis.yml` | **`packages/preset/agent-presets/presets/standard/agent.cordis.yml`**（⚠️ 迁移） |
+| web-app 依赖 | `packages/bundle/web-app/package.json` | `packages/bundle/web-app/package.json`（不变） |
+| tsconfig references | `tsconfig.host.json` / `tsconfig.client.json` | `tsconfig.host.json` / `tsconfig.client.json`（不变） |
+
+> 0.1.2 里 `agent-presets` 目录从 `apps/cli/config/` 整体迁移到了 `packages/preset/`，所以 preset 接入点路径变了；其余三个接入点路径不变。完整 9 处适配见上方「LMA 适配新版本的步骤」。
 
 ---
 
