@@ -377,7 +377,7 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
       name: '@szx-a/dsh-layered-memory-architecture'
 ```
 
-**2. preset 接入** — `packages/preset/agent-presets/presets/standard/agent.cordis.yml`（⚠️ 0.1.2 新路径，旧版在 `apps/cli/config/agent-presets/standard/`），末尾加：
+**2. preset 接入** — `packages/preset/agent-presets/presets/standard/agent.cordis.yml`（⚠️ 0.1.2 新路径，旧版在 apps/cli/config/agent-presets/standard/），末尾加：
 
 ```yaml
 # LMA 记忆体：模型面向的工具 + 自动总结
