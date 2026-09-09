@@ -65,7 +65,7 @@
 >
 > ⚠️ `defaultBodies` 是**默认挂载清单，不是创建命令**：`code` 只是示例名，可改成任意体 id（如 `[physics]`），但该体**必须先在磁盘上创建**（设置页建，或手动建 `body.json`），否则 `/remember` 会报 `does not exist`。
 
-**3. `apps/cli/config/agent-presets/standard/agent.cordis.yml`** —— 末尾加 1 个 row（preset 平面）：
+**3. `packages/preset/agent-presets/presets/standard/agent.cordis.yml`**（⚠️ 0.1.2 新路径，旧版在 `apps/cli/config/agent-presets/standard/`）—— 末尾加 1 个 row（preset 平面）：
 
 ```yaml
 - id: memory-body-preset
@@ -94,13 +94,16 @@ packages/memory/memory-body/           # host 包：存储 + 命令 + Remote + G
 packages/memory/memory-body-preset/    # preset 包：工具 + 自动总结
 ```
 
-**8. 构建**（在 harness 根目录）：
+**8. 构建**（在 harness 根目录，必须跑 host + client 两个 face）：
 
 ```bash
-pnpm exec tsc -b packages/memory/memory-body/tsconfig.host.json packages/memory/memory-body-preset
-cd packages/memory/memory-body          && pnpm exec tsdown --env.DSH_BUILD_FACE client
-cd packages/memory/memory-body-preset   && pnpm exec tsdown
+pnpm run clean                 # 更新版本后先清旧 lib 产物
+pnpm install
+pnpm run build:lib:host        # tsc -b tsconfig.host.json && tsdown --env.DSH_BUILD_FACE host
+pnpm run build:lib:client      # tsc -b tsconfig.client.json && tsdown --env.DSH_BUILD_FACE client
 ```
+
+> 只跑 host face 会让 `dsh web` 报 `MissingClientBundleError`（缺全图 `lib/client.js`）。
 
 **9. 重启**：`Ctrl+C` 停掉 `pnpm dsh web` 再重启（命令在 node 进程启动时注册，只刷新浏览器不会加载）。
 
@@ -115,7 +118,9 @@ cd packages/memory/memory-body-preset   && pnpm exec tsdown
 
 ### 方式二：npm 安装（推荐）
 
-已发布到 npm（`@szx-a/dsh-layered-memory-architecture@0.1.1-rc.2` + `-preset`），适合**不想放源码、不想自己构建**的情况（npm 包已含编译好的 `lib/` 产物和类型声明）。
+已发布到 npm（`@szx-a/dsh-layered-memory-architecture@0.1.1-rc.2` + `-preset`，基于 dsh `0.1.1-rc.2`），适合**不想放源码、不想自己构建**的情况（npm 包已含编译好的 `lib/` 产物和类型声明）。
+
+> ⚠️ 当前 npm 版是 `0.1.1-rc.2`（dsh rc.2），尚未发布 `0.1.2` 版。若你的 dsh 是 `0.1.2-rc.1`，请用**方式一（手动接入）**，npm 版暂时不兼容 0.1.2。
 
 **1. 安装两个包**（装到 web-app bundle）：
 
@@ -125,7 +130,7 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 
 **2. 改 `packages/bundle/web-app/cordis.patch.yml`**（同方式一第 2 步）：加 `memory-store` + `memory-body` 两个 row。
 
-**3. 改 `apps/cli/config/agent-presets/standard/agent.cordis.yml`**（同方式一第 3 步）：加 `memory-body-preset` row。
+**3. 改 `packages/preset/agent-presets/presets/standard/agent.cordis.yml`**（⚠️ 0.1.2 新路径，同方式一第 3 步）：加 `memory-body-preset` row。
 
 **4. 重启**：`Ctrl+C` 停掉 `pnpm dsh web` 再重启。
 
