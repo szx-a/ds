@@ -35,7 +35,7 @@
 
 ### 前置：版本对齐（重要）
 
-当前基于 dsh `0.1.1-rc.2`（插件 version 同为 `0.1.1-rc.2`），已发布到 npm。
+源码已适配 dsh `0.1.2-rc.1`（9 处改动，含挂载标签实时刷新）。npm 发布版目前仍是 `0.1.1-rc.2`，`0.1.2` 版待发布。
 
 ### 方式一：手动接入（当前可用的方式）
 
@@ -298,7 +298,8 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 3. 修 client 插件自 mount Remote（第三方包不在 api-remotes 白名单）
 4. 加会话级挂载（`/mount` `/unmount`）
 5. FTS5 分词器 unicode61 → trigram（修中文检索）
-6. 在 worktree 副本完成 `v0.1.2-alpha.1` 适配并验证完整跑通（9 处改动，构建 0 错误，`dsh web` 干净启动，挂载标签实时刷新已恢复）—— 正式发布待 rc
+6. 在 worktree 副本完成 `v0.1.2-alpha.1` 适配并验证完整跑通（9 处改动，构建 0 错误，挂载标签实时刷新已恢复）
+7. 官方出 `v0.1.2-rc.1` 后，主体已更新到 rc.1 并跑通（9 处适配跨 alpha.1→alpha.4→rc.1 全程零改动）；`0.1.2` npm 版待发布
 
 ### 关键踩坑（已固化到 `RECOVERY.md`）
 
@@ -337,16 +338,16 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 
 | 项 | 值 |
 |---|---|
-| dsh 版本 | `0.1.1-rc.2` |
-| 插件 version | `0.1.1-rc.2` |
+| dsh 版本 | `0.1.2-rc.1`（源码已适配） |
+| 插件 version | `0.1.1-rc.2`（npm 发布版）；源码已适配 `0.1.2-rc.1` |
 | npm 包 | `@szx-a/dsh-layered-memory-architecture` + `-preset` |
 | peerDependencies | 发布时由 `pnpm publish` 自动替换 `workspace:^` → `^0.1.1-rc.2` |
 
 ### 兼容性说明
 
-**当前稳定支持**：dsh `v0.1.1-rc.2`（npm 包 `@szx-a/dsh-layered-memory-architecture@0.1.1-rc.2` + `-preset`）。
+**当前稳定支持**：dsh `v0.1.2-rc.1`（源码已适配并跑通）；npm 发布版仍是 `v0.1.1-rc.2`（`@szx-a/dsh-layered-memory-architecture@0.1.1-rc.2` + `-preset`），`0.1.2` 版待发布。
 
-**`v0.1.2-alpha.1` 兼容性状态**：官方正在进行重大重构。作者已在 worktree 副本（隔离环境，主目录 3080 全程不动）完成适配并**验证可完整跑通、功能不降级**——9 处改动、host/preset/client 三侧构建 0 错误、`dsh web` 干净启动、挂载标签实时刷新已恢复。破坏点与实测结论：
+**`v0.1.2` 兼容性状态**：官方从 rc.2 到 0.1.2 经历重大重构。作者已在 worktree 副本（隔离环境）完成适配，并已**将主体更新到 `0.1.2-rc.1` 验证跑通、功能不降级**——9 处改动、host/preset/client 三侧构建 0 错误、`dsh web` 干净启动、挂载标签实时刷新已恢复。适配跨 alpha.1→alpha.4→rc.1 全程零改动，破坏点与实测结论：
 
 | 破坏点 | 影响 LMA 的 | 实测结论 |
 |---|---|---|
@@ -354,8 +355,7 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 | `@deepseek-ai/dsh-client-runtime` 被拆散 | client 插件依赖 | `ClientContext` → cordis `Context`；`ConversationSnapshot.chat.legacy.nodes` → chat 包的 `ChatSnapshot.legacy.nodes`；store 引擎 → `dsh-client-store`。共 9 处改动，详见下方适配步骤 |
 | ApiProxy 移除 | Remote 层 | ✅ `ctx.remote.$mount` / `TypertRemoteNamespaceMap` 未变，**零改动** |
 
-**作者立场**：作为 LMA 的作者/维护者，会跟进官方版本演进，**等 `0.1.2` 出 rc 稳定版后第一时间适配并发布新版本**。虽然 alpha.1 已在副本跑通，但官方 alpha未稳定、runtime→store 重构仍在变动
-（ChatSnapshot.legacy.nodes 的 legacy 字段名暗示官方可能在 rc 前改名），此时发布会反复返工，故待稳定后一次到位。
+**作者立场**：LMA 已适配 `0.1.2-rc.1` 并在主体跑通。官方在 rc.1 之后已开启 `0.1.3-alpha`，`0.1.2` 进入稳定期。`0.1.2` 的 npm 发布版待定。
 
 ### LMA 适配新版本的步骤（供先行者自担风险参考）
 
