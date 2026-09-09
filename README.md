@@ -359,7 +359,7 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 
 ### LMA 适配新版本的步骤（供先行者自担风险参考）
 
-> 教程级清单，具体到文件 + 行 + 前后代码。完整版（含报错现象、踩坑、回滚）见本地《LMA-适配手册》。实测 alpha.1→alpha.4 这 9 处改动原样成立、零改动。
+> 教程级清单，具体到文件 + 行 + 前后代码。实测 alpha.1→alpha.4 这 9 处改动原样成立、零改动。
 
 **A. 接入点（4 处，路径变化）**
 
@@ -377,7 +377,7 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
       name: '@szx-a/dsh-layered-memory-architecture'
 ```
 
-**2. preset 接入** — `packages/preset/agent-presets/presets/standard/agent.cordis.yml`（⚠️ 0.1.2 新路径，旧版在 `apps/cli/config/agent-presets/standard/`），末尾加：
+**2. preset 接入** — `packages/preset/agent-presets/presets/standard/agent.cordis.yml`（⚠️ 0.1.2 新路径，旧版在 apps/cli/config/agent-presets/standard/），末尾加：
 
 ```yaml
 # LMA 记忆体：模型面向的工具 + 自动总结
