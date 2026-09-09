@@ -343,16 +343,19 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 
 | 项 | 值 |
 |---|---|
-| dsh 版本 | `0.1.2-rc.1`（源码已适配） |
-| 插件 version | `0.1.1-rc.2`（npm 发布版）；源码已适配 `0.1.2-rc.1` |
+| dsh 版本 | `0.1.2-rc.1`（源码已适配并跑通） |
+| 插件 version | `0.1.1-rc.2`（npm 发布版，dsh rc.2）；源码已适配 `0.1.2-rc.1` |
 | npm 包 | `@szx-a/dsh-layered-memory-architecture` + `-preset` |
-| peerDependencies | 发布时由 `pnpm publish` 自动替换 `workspace:^` → `^0.1.1-rc.2` |
+| peerDependencies | 发布时由 `pnpm publish` 自动替换 `workspace:^` → 对应官方版本（发布 `0.1.2` 版时为 `^0.1.2-rc.1`） |
 
 ### 兼容性说明
 
-**当前稳定支持**：dsh `v0.1.2-rc.1`（源码已适配并跑通）；npm 发布版仍是 `v0.1.1-rc.2`（`@szx-a/dsh-layered-memory-architecture@0.1.1-rc.2` + `-preset`），`0.1.2` 版待发布。
+| 版本 | 支持状态 |
+|---|---|
+| dsh `v0.1.1-rc.2` | ✅ npm 发布版（`@szx-a/dsh-layered-memory-architecture@0.1.1-rc.2` + `-preset`） |
+| dsh `v0.1.2-rc.1` | ✅ 源码已适配并跑通（主体已更新验证），`0.1.2` npm 版待发布 |
 
-**`v0.1.2` 兼容性状态**：官方从 rc.2 到 0.1.2 经历重大重构。作者已在 worktree 副本（隔离环境）完成适配，并已**将主体更新到 `0.1.2-rc.1` 验证跑通、功能不降级**——9 处改动、host/preset/client 三侧构建 0 错误、`dsh web` 干净启动、挂载标签实时刷新已恢复。适配跨 alpha.1→alpha.4→rc.1 全程零改动，破坏点与实测结论：
+**`v0.1.2` 适配结论**：官方从 rc.2 到 0.1.2 经历重大重构。作者已在 worktree 副本（隔离环境）完成适配，并已**将主体更新到 `0.1.2-rc.1` 验证跑通、功能不降级**——9 处改动、host/preset/client 三侧构建 0 错误、`dsh web` 干净启动、挂载标签实时刷新已恢复。适配跨 alpha.1→alpha.4→rc.1 全程零改动。破坏点与实测结论：
 
 | 破坏点 | 影响 LMA 的 | 实测结论 |
 |---|---|---|
