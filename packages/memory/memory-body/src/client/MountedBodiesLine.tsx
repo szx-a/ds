@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import type { ConversationSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
+import type { ChatSnapshot } from '@deepseek-ai/dsh-client-ui-chat/client'
 
 /** 挂载状态标签的注入面。 */
 export interface MountedBodiesLineInjected {
@@ -9,13 +9,13 @@ export interface MountedBodiesLineInjected {
 
 /** 输入框 dock 的挂载状态标签：显示当前会话挂载的记忆体，随挂载命令实时刷新。 */
 export function MountedBodiesLine(
-  props: MountedBodiesLineInjected & { useSession?: SnapshotSelectorHook<ConversationSnapshot> },
+  props: MountedBodiesLineInjected & { useChat: SnapshotSelectorHook<ChatSnapshot> },
 ): ReactNode {
-  const { listMounted, useSession } = props
+  const { listMounted, useChat } = props
   const [mounted, setMounted] = useState<string[] | null>(null)
 
-  // 会话消息节点数作为「有变化」信号：/mount /unmount 执行后会产生新消息节点，触发重新查询。
-  const nodeCount = useSession?.(s => s.chat.legacy.nodes.length) ?? 0
+  // 消息节点数作为「有变化」信号：/mount /unmount 执行后会产生新消息节点，触发重新查询。
+  const nodeCount = useChat(s => s.legacy.nodes.length) ?? 0
 
   useEffect(() => {
     let alive = true

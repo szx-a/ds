@@ -5,7 +5,9 @@
  * 第三方包的 Remote 必须由 client 插件自己 ctx.remote.$mount（照 api-remotes 的 apply 先例）。
  */
 
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+import type { Context as ClientContext } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/dsh-api-remotes/client'
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type { TypertRemoteNamespaceMap } from '@deepseek-ai/dsh-typert-protocol'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
@@ -60,9 +62,9 @@ export async function apply(ctx: ClientContext): Promise<void> {
     name: 'conversation.composer.dock',
     id: 'memory-mounted',
     order: 1,
-    inject: (sessionId: string) => ({
+    inject: sessionId => ({
       listMounted: async (): Promise<string[]> => {
-        const r = await remote.listMounted(sessionId)
+        const r = await remote.listMounted(String(sessionId))
         return r.ok ? r.value : []
       },
     }),

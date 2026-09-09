@@ -25,8 +25,7 @@ export function registerAutoSummarize(ctx: Context, store: MemoryStore, enabled:
     const last = lastSummarized.get(agent) ?? 0
     if (length < MIN_MESSAGES || length - last < MIN_GAP) return
 
-    const bodyId = bodies[0]
-    if (bodyId === undefined) return
+    const bodyId = bodies[0]!
     void summarizeIntoBody(ctx, store, bodyId, agent).then((result) => {
       if (result.ok) {
         lastSummarized.set(agent, length)
