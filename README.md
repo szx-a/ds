@@ -370,9 +370,9 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 
 ### LMA 适配新版本的步骤（供先行者自担风险参考）
 
-> 教程级清单，具体到文件 + 行 + 前后代码。实测 alpha.1→alpha.4 这 9 处改动原样成立、零改动。
+> 教程级清单，具体到文件 + 行 + 前后代码。以 dsh 0.2.0-rc.2 为准；从旧版本（rc.2 / 0.1.x）跨过来时，先看「A. 接入点」和「B. client 源码」是否已经改过。
 
-**A. 接入点（4 处，路径变化）**
+**A. 接入点（路径随版本变化，0.2.0 的 preset 声明方式变了）**
 
 **1. host 接入** — `packages/bundle/web-app/cordis.patch.yml`，在 `plugin-inventory` row 后加：
 
@@ -388,21 +388,23 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
       name: '@szx-a/dsh-layered-memory-architecture'
 ```
 
-**2. preset 接入** — `packages/preset/agent-presets/presets/standard/agent.cordis.yml`（⚠️ 0.1.2 新路径，旧版在 apps/cli/config/agent-presets/standard/），末尾加：
+**2. preset 接入** — ⚠️ 0.2.0 变了，不再是独立的 agent.cordis.yml row，而是 `packages/bundle/web-app/presets/standard.patch.yml` 里 `preset-standard` 声明的 `config.plugins` 数组末尾加一个条目：
 
 ```yaml
-# LMA 记忆体：模型面向的工具 + 自动总结
-- id: memory-body-preset
-  name: '@szx-a/dsh-layered-memory-architecture-preset'
-  config:
-    autoSummarize: false
+          # LMA 记忆体：模型面向的工具 + 自动总结
+          - id: memory-body-preset
+            name: '@szx-a/dsh-layered-memory-architecture-preset'
+            config:
+              autoSummarize: false
 ```
 
-**3. 依赖** — `packages/bundle/web-app/package.json` 的 `dependencies` 加 2 行：
+> 历史沿革：0.1.1-rc.2 在 `apps/cli/config/agent-presets/standard/agent.cordis.yml`；0.1.2 搬到 `packages/preset/agent-presets/presets/standard/agent.cordis.yml`；**0.2.0 改为 `packages/bundle/web-app/presets/standard.patch.yml` 的 plugins 数组声明方式**（preset 从静态 yml row 变成 `@deepseek-ai/dsh-agent-preset` 声明的 config.plugins 条目）。
+
+**3. 依赖** — `packages/bundle/web-app/package.json` 的 `dependencies` 加 2 行（⚠️ 0.2.0 用 `workspace:*` 而不是 `workspace:^`）：
 
 ```json
-"@szx-a/dsh-layered-memory-architecture": "workspace:^",
-"@szx-a/dsh-layered-memory-architecture-preset": "workspace:^"
+"@szx-a/dsh-layered-memory-architecture": "workspace:*",
+"@szx-a/dsh-layered-memory-architecture-preset": "workspace:*"
 ```
 
 **4. references** — `tsconfig.host.json` 的 `references` 加：
@@ -452,10 +454,13 @@ import type { ChatSnapshot } from '@deepseek-ai/dsh-client-ui-chat/client'     /
 
 > 我们 LMA 没直接用 store 引擎，删掉 runtime 即可，无需加 `@deepseek-ai/dsh-client-store`。
 
-**8. `tsconfig.client.json`** — 删 `client/runtime` reference，加：
+**8. `tsconfig.client.json`** — 删 `client/runtime` reference；⚠️ 0.2.0 里 ui-settings/ui-conversation/ui-chat 拆成 host/client 子项目，引用要指向 `.client.json`：
 
 ```json
-{ "path": "../../client/ui-chat" }
+// 0.2.0 的正确引用（旧版直接引目录 ../../client/ui-chat）
+{ "path": "../../client/ui-settings/tsconfig.client.json" },
+{ "path": "../../client/ui-conversation/tsconfig.client.json" },
+{ "path": "../../client/ui-chat/tsconfig.client.json" }
 ```
 
 **9. `src/client/index.tsx`** — 补 2 个空 import + slot 参数类型：
@@ -484,19 +489,38 @@ inject: (sessionId) => ({
 
 > 实时刷新信号也已恢复：`MountedBodiesLine` 里 `useSession(s => s.chat.legacy.nodes.length)` → `useChat(s => s.legacy.nodes.length)`（照官方 `StatsLine` 先例，`useChat` 由 ui-chat merge 进 `SessionStandardProps`，session 作用域 slot 组件自动获得）。
 
+**10. `src/summarize.ts`（⚠️ 0.2.0 新增改动）** — MessageSource 移除了通用 `plugin` kind：
+
+```ts
+// 旧
+source: { kind: 'plugin', plugin: 'dsh-memory-body' }
+// 新（0.2.0 的 MessageSourceMap 只有 user/model/tool/system-prompt）
+source: { kind: 'user' }
+```
+
+**11. `pnpm-workspace.yaml`（⚠️ 0.2.0 新增，官方 lock 漂移绕行）** — 在 `overrides` 段加：
+
+```yaml
+overrides:
+  'micromark-util-types': '2.0.2'
+```
+
+> 0.2.0-rc.2 的官方 lock 存在 micromark-util-types 版本漂移（2.0.2/2.0.3 冲突导致 ui-primitives 类型报错）。加 override 锁 2.0.2 才能 `pnpm install` 通过。注意 pnpm 11.7 不读 package.json 的 pnpm.overrides，要写在 `pnpm-workspace.yaml`。
+
 **C. 构建 + 验证（⚠️ 关键教训）**
 
 ```bash
 pnpm run clean                 # 更新版本后必先清旧 lib 产物，否则假 MISSING_EXPORT
-pnpm install                   # 链接新依赖
-pnpm run build:lib:host        # = tsc -b tsconfig.host.json && tsdown --env.DSH_BUILD_FACE host
+pnpm install                   # 链接新依赖（会触发 micromark 漂移，需上面第 11 步的 override）
+pnpm run build:lib:host        # = tsc -b tsconfig.host.json && tsdown host && desktop bundle
 pnpm run build:lib:client      # = tsc -b tsconfig.client.json && tsdown --env.DSH_BUILD_FACE client
 pnpm dsh web --no-open --port 0
 ```
 
 - **必须跑 host + client 两个 face**：只跑 host face 会让 `dsh web` 报 `MissingClientBundleError`（缺全图 `lib/client.js`）。
 - **通过标准**：打印 URL + `ExperimentalWarning: SQLite`，无 `pending`、无 `typert manifest`、无 `MissingClientBundleError`；HTTP 探测返回 401 即确认监听。
-- **编译错误先分真假**：`Cannot find module .../remote`、`MISSING_EXPORT` 类报错，多数是「依赖产物没构建 / 旧 lib 残留」，先 clean + 全量构建，剩下的才是真 API 变化，**别急着改好代码**。
+- **编译错误先分真假**：`Cannot find module .../remote`、`MISSING_EXPORT` 类报错，多数是「依赖产物没构建 / 旧 lib 残留 / 依赖版本漂移」，先 clean + 全量构建 + 确认 override，剩下的才是真 API 变化，**别急着改好代码**。
+- ⚠️ **build:lib:host 的 exit 1 可能来自最后的 desktop bundle**（输出全是 `✓ built` 无 error）。验证 LMA 编译应单独跑 `tsc -b tsconfig.host.json` + `tsc -b tsconfig.client.json` + `tsdown --env.DSH_BUILD_FACE client`，不要被 desktop bundle 的 exit 1 干扰。
 
 ---
 
