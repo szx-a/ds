@@ -35,7 +35,7 @@
 
 ### 前置：版本对齐（重要）
 
-源码已适配 dsh `0.2.0-rc.2`（含挂载标签实时刷新）。npm 发布版目前仍是 `0.1.1-rc.2`，`0.2.0` 版待发布。
+源码已适配 dsh `0.2.0-rc.2`（含挂载标签实时刷新）。npm 发布版：`latest` = `0.1.1-rc.2`（dsh rc.2），`rc` = `0.2.0-rc.4`（dsh 0.2.0-rc.2）。
 
 ### 方式一：手动接入（当前可用的方式）
 
@@ -116,27 +116,53 @@ pnpm run build:lib:client      # tsc -b tsconfig.client.json && tsdown --env.DSH
 
 > ⚠️ 本仓库是**源码存档**，不含 `lib/` 构建产物，且依赖 harness monorepo 的 `@deepseek-ai/*` 包 —— 必须放进 harness 源码树内构建，不能独立编译运行。
 
-### 方式二：npm 安装（推荐）
+### 方式二：npm 安装（web 端）
 
-已发布到 npm（`@szx-a/dsh-layered-memory-architecture@0.1.1-rc.2` + `-preset`，基于 dsh `0.1.1-rc.2`），适合**不想放源码、不想自己构建**的情况（npm 包已含编译好的 `lib/` 产物和类型声明）。
+npm 已发布两个包，**基于 dsh `0.2.0-rc.2`**（`rc` tag），适合 web 端**不想放源码、不想自己构建**的情况（npm 包已含编译好的 `lib/` 产物和类型声明）。
 
-> ⚠️ 当前 npm 版是 `0.1.1-rc.2`（dsh rc.2），尚未发布 `0.2.0` 版。若你的 dsh 是 `0.2.0-rc.2`（或 0.1.2/0.1.5 系列），请用**方式一（手动接入）**，npm 版暂时不兼容新版 dsh。
+- `@szx-a/dsh-layered-memory-architecture@0.2.0-rc.4`
+- `@szx-a/dsh-layered-memory-architecture-preset@0.2.0-rc.4`
+
+> ⚠️ `latest` tag 仍是 `0.1.1-rc.2`（dsh rc.2 旧版）。装 0.2.0 版需显式写 `@0.2.0-rc.4` 或 `@rc`。
 
 **1. 安装两个包**（装到 web-app bundle）：
 
 ```bash
-pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architecture @szx-a/dsh-layered-memory-architecture-preset
+pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architecture@0.2.0-rc.4 @szx-a/dsh-layered-memory-architecture-preset@0.2.0-rc.4
 ```
 
 **2. 改 `packages/bundle/web-app/cordis.patch.yml`**（同方式一第 2 步）：加 `memory-store` + `memory-body` 两个 row。
 
-**3. 改 `packages/preset/agent-presets/presets/standard/agent.cordis.yml`**（⚠️ 0.1.2 新路径，同方式一第 3 步）：加 `memory-body-preset` row。
+**3. 改 `packages/bundle/web-app/presets/standard.patch.yml`**（⚠️ 0.2.0 新路径，同方式一第 3 步）：在 `preset-standard` 的 `config.plugins` 数组末尾加 `memory-body-preset` 条目。
 
 **4. 重启**：`Ctrl+C` 停掉 `pnpm dsh web` 再重启。
 
 **5. 初始化体**（同方式一第 10 步）。
 
 > npm 安装**省掉了**方式一的第 1、4、5、6~7、8 步：不用手动加 web-app 依赖（`pnpm add` 自动写）、不用改 tsconfig、不用放源码、不用构建。
+
+### 方式三：桌面端接入（bundle 安装，推荐桌面版）
+
+桌面端（Electron 打包版）**不用改源码、不用构建**，直接在插件管理器里装 npm 包。LMA 已声明为 bundle（`dsh.bundle.patch` 指向包内 `cordis.patch.yml`），桌面端能自动识别接入点。
+
+**1. 打开桌面端插件管理器**，安装两个包：
+
+```
+@szx-a/dsh-layered-memory-architecture@0.2.0-rc.4
+@szx-a/dsh-layered-memory-architecture-preset@0.2.0-rc.4
+```
+
+（等价于 `plugin_manager install_bundle <包名>`）
+
+**2. 配置记忆数据目录**：LMA 的 bundle 自带 `cordis.patch.yml` 里默认 `root: 'F:/dp/memory-body-data'`。若要用你自己的目录，安装后在桌面端 profile 的 `cordis.patch.yml` 里覆盖 `memory-store` 的 `config.root`。
+
+**3. 重启桌面端**，让新 bundle 生效。
+
+**4. 初始化体**（同方式一第 10 步）。
+
+> ⚠️ 桌面端安装有两个已知注意点（都是 dsh 桌面版的供应链/分发机制，非 LMA 问题）：
+> - 桌面端 profile 默认走 npmmirror 镜像，可能同步滞后。若"找不到包"，在 profile 目录（`~/.dsh/profiles/desktop/.npmrc`）加 `registry=https://registry.npmjs.org/` 强制走官方源。
+> - dsh 的供应链策略 `minimumReleaseAge` 会拦截**刚发布**的包。若报 `minimumReleaseAge` 违规，在 profile 的 `pnpm-workspace.yaml` 加 `minimumReleaseAgeExclude` 条目（`包名@版本`）豁免，然后在该目录手动 `pnpm install` 重读配置。
 
 ---
 

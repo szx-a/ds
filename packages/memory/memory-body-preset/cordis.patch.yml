@@ -1,0 +1,10 @@
+# LMA 记忆体 preset 包：模型面向的工具（memory_search / memory_remember /
+# memory_forget / memory_correct）与自动总结。
+# 本质是 host 平面插件（inject memoryStore / tools / llm），作为 dsh.bundle.patch
+# 向 profile 插入一个 host 平面 row。
+
+- insert:
+    - id: memory-body-preset
+      name: '@szx-a/dsh-layered-memory-architecture-preset'
+      config:
+        autoSummarize: false

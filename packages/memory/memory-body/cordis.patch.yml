@@ -1,0 +1,13 @@
+# LMA 记忆体 host 包：共享存储服务 + Remote（体管理 GUI）+ 命令。
+# 作为 dsh.bundle.patch 被 loader 应用，向 profile 插入两个 host 平面 row。
+# 存储数据目录 root 与默认挂载体 defaultBodies 在此配置。
+
+- insert:
+    - id: memory-store
+      name: '@szx-a/dsh-layered-memory-architecture/memory-store'
+      config:
+        root: 'F:/dp/memory-body-data'
+        defaultBodies: [code]
+
+    - id: memory-body
+      name: '@szx-a/dsh-layered-memory-architecture'
