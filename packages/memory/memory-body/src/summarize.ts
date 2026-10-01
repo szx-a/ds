@@ -74,7 +74,7 @@ export async function summarizeIntoBody(
     ...history,
     createUserMessage({
       content: [{ type: 'text', text: SUMMARIZE_INSTRUCTION }],
-      source: { kind: 'plugin', plugin: 'dsh-memory-body' },
+      source: { kind: 'user' },
     }),
   ]
   const options: GenerateOptions = {

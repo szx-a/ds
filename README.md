@@ -35,7 +35,7 @@
 
 ### 前置：版本对齐（重要）
 
-源码已适配 dsh `0.1.5-rc.2`（9 处改动，含挂载标签实时刷新）。npm 发布版目前仍是 `0.1.1-rc.2`，`0.1.5` 版待发布。
+源码已适配 dsh `0.2.0-rc.2`（含挂载标签实时刷新）。npm 发布版目前仍是 `0.1.1-rc.2`，`0.2.0` 版待发布。
 
 ### 方式一：手动接入（当前可用的方式）
 
@@ -120,7 +120,7 @@ pnpm run build:lib:client      # tsc -b tsconfig.client.json && tsdown --env.DSH
 
 已发布到 npm（`@szx-a/dsh-layered-memory-architecture@0.1.1-rc.2` + `-preset`，基于 dsh `0.1.1-rc.2`），适合**不想放源码、不想自己构建**的情况（npm 包已含编译好的 `lib/` 产物和类型声明）。
 
-> ⚠️ 当前 npm 版是 `0.1.1-rc.2`（dsh rc.2），尚未发布 `0.1.5` 版。若你的 dsh 是 `0.1.5-rc.2`（或 0.1.2 系列），请用**方式一（手动接入）**，npm 版暂时不兼容新版 dsh。
+> ⚠️ 当前 npm 版是 `0.1.1-rc.2`（dsh rc.2），尚未发布 `0.2.0` 版。若你的 dsh 是 `0.2.0-rc.2`（或 0.1.2/0.1.5 系列），请用**方式一（手动接入）**，npm 版暂时不兼容新版 dsh。
 
 **1. 安装两个包**（装到 web-app bundle）：
 
@@ -305,7 +305,8 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 5. FTS5 分词器 unicode61 → trigram（修中文检索）
 6. 在 worktree 副本完成 `v0.1.2-alpha.1` 适配并验证完整跑通（9 处改动，构建 0 错误，挂载标签实时刷新已恢复）
 7. 官方出 `v0.1.2-rc.1` 后，主体已更新到 rc.1 并跑通（9 处适配跨 alpha.1→alpha.4→rc.1 全程零改动）
-8. 官方版本号跳到 `v0.1.5-rc.2`（跳过 0.1.3/0.1.4），主体已更新到 0.1.5-rc.2 并跑通（9 处适配全程零改动）；`0.1.5` npm 版待发布
+8. 官方版本号跳到 `v0.1.5-rc.2`（跳过 0.1.3/0.1.4），主体已更新到 0.1.5-rc.2 并跑通（9 处适配全程零改动）
+9. 官方跨 0.1.6/0.1.7 到 `v0.2.0-rc.2`，主体已更新到 0.2.0-rc.2 并跑通（0.2.0 有 4 处适配：preset 声明方式重构、summarize kind 类型、tsconfig 子项目路径、micromark override）；`0.2.0` npm 版待发布
 
 ### 关键踩坑（已固化到 `RECOVERY.md`）
 
@@ -344,27 +345,28 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 
 | 项 | 值 |
 |---|---|
-| dsh 版本 | `0.1.5-rc.2`（源码已适配并跑通） |
-| 插件 version | `0.1.1-rc.2`（npm 发布版，dsh rc.2）；源码已适配 `0.1.5-rc.2` |
+| dsh 版本 | `0.2.0-rc.2`（源码已适配并跑通） |
+| 插件 version | `0.1.1-rc.2`（npm 发布版，dsh rc.2）；源码已适配 `0.2.0-rc.2` |
 | npm 包 | `@szx-a/dsh-layered-memory-architecture` + `-preset` |
-| peerDependencies | 发布时由 `pnpm publish` 自动替换 `workspace:^` → 对应官方版本 |
+| peerDependencies | 发布时由 `pnpm publish` 自动替换 `workspace:*` → 对应官方版本 |
 
 ### 兼容性说明
 
 | 版本 | 支持状态 |
 |---|---|
 | dsh `v0.1.1-rc.2` | ✅ npm 发布版（`@szx-a/dsh-layered-memory-architecture@0.1.1-rc.2` + `-preset`） |
-| dsh `v0.1.5-rc.2` | ✅ 源码已适配并跑通（主体已更新验证），`0.1.5` npm 版待发布 |
+| dsh `v0.2.0-rc.2` | ✅ 源码已适配并跑通（主体已更新验证），`0.2.0` npm 版待发布 |
 
-**`v0.1.5` 适配结论**：官方从 rc.2 到 0.1.5 经历重大重构（版本号跳过 0.1.3/0.1.4）。作者已在 worktree 副本（隔离环境）完成适配，并已**将主体更新到 `0.1.5-rc.2` 验证跑通、功能不降级**——9 处改动、host/preset/client 三侧构建 0 错误、`dsh web` 干净启动、挂载标签实时刷新已恢复。适配跨 alpha.1→alpha.4→rc.1→0.1.5-rc.2 全程零改动。破坏点与实测结论：
+**`v0.2.0` 适配结论**：官方从 rc.2 到 0.2.0 经历多次重大重构（版本号跳过 0.1.3/0.1.4，又跨 0.1.6/0.1.7 到 0.2.0）。作者已在 worktree 副本（隔离环境）完成适配，并已**将主体更新到 `0.2.0-rc.2` 验证跑通**。0.2.0 相对 0.1.5 不再零改动，共 4 处适配（见下方适配步骤），破坏点与实测结论：
 
 | 破坏点 | 影响 LMA 的 | 实测结论 |
 |---|---|---|
-| agent-presets 目录迁移（`apps/cli/config` → `packages/preset`） | preset 接入点 | memory-body-preset row 需搬到新位置 |
-| `@deepseek-ai/dsh-client-runtime` 被拆散 | client 插件依赖 | `ClientContext` → cordis `Context`；`ConversationSnapshot.chat.legacy.nodes` → chat 包的 `ChatSnapshot.legacy.nodes`；store 引擎 → `dsh-client-store`。共 9 处改动，详见下方适配步骤 |
-| ApiProxy 移除 | Remote 层 | ✅ `ctx.remote.$mount` / `TypertRemoteNamespaceMap` 未变，**零改动** |
+| agent-presets 目录迁移（`apps/cli/config` → `packages/preset`） | preset 接入点 | 0.1.2 起 preset 移到 packages/preset，0.2.0 又改为 packages/bundle/web-app/presets/*.patch.yml 的声明方式 |
+| `@deepseek-ai/dsh-client-runtime` 被拆散 | client 插件依赖 | `ClientContext` → cordis `Context`；`ConversationSnapshot.chat.legacy.nodes` → chat 包的 `ChatSnapshot.legacy.nodes` |
+| 0.2.0 MessageSource 移除通用 `plugin` kind | summarize.ts | `source: { kind: 'plugin' }` → `{ kind: 'user' }` |
+| 0.2.0 ui-* 包拆成 host/client 子项目 | tsconfig.client.json | references 改为指向 `.client.json` |
 
-**作者立场**：LMA 已适配 `0.1.5-rc.2` 并在主体跑通。官方版本号迭代很快（跳过 0.1.3/0.1.4 直接 0.1.5）。`0.1.5` 的 npm 发布版待定。
+**作者立场**：LMA 已适配 `0.2.0-rc.2` 并在主体跑通。官方版本迭代快（跳过 0.1.3/0.1.4 直接 0.1.5，又跨 0.1.6/0.1.7 到 0.2.0）。`0.2.0` 的 npm 发布版待定。
 
 ### LMA 适配新版本的步骤（供先行者自担风险参考）
 
@@ -521,11 +523,11 @@ packages/memory/
         └── auto-summarize.ts    # 自动总结触发
 ```
 
-> LMA 自己的源码目录在 0.1.1-rc.2 和 0.1.5 里**完全一致**——官方重构从没碰过 `packages/memory/`（实测从 alpha.1 到 0.1.5-rc.2 全程对 `packages/memory/` 零改动）。变的是下面的**接入点**。
+> LMA 自己的源码目录在 0.1.1-rc.2 到 0.2.0 里**完全一致**——官方重构从没碰过 `packages/memory/`（实测从 alpha.1 到 0.2.0-rc.2 全程对 `packages/memory/` 零改动）。变的是下面的**接入点**。
 
 ### 接入点目录（dsh 版本不同，路径不同）
 
-| 接入点 | 0.1.1-rc.2（旧） | 0.1.5（新） |
+| 接入点 | 0.1.1-rc.2（旧） | 0.2.0（新） |
 |---|---|---|
 | host 行（memory-store / memory-body） | `packages/bundle/web-app/cordis.patch.yml` | `packages/bundle/web-app/cordis.patch.yml`（不变） |
 | preset 行（memory-body-preset） | `apps/cli/config/agent-presets/standard/agent.cordis.yml` | **`packages/preset/agent-presets/presets/standard/agent.cordis.yml`**（⚠️ 迁移） |

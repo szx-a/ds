@@ -27,13 +27,13 @@
       "path": "../../client/ui-slots"
     },
     {
-      "path": "../../client/ui-settings"
+      "path": "../../client/ui-settings/tsconfig.client.json"
     },
     {
-      "path": "../../client/ui-conversation"
+      "path": "../../client/ui-conversation/tsconfig.client.json"
     },
     {
-      "path": "../../client/ui-chat"
+      "path": "../../client/ui-chat/tsconfig.client.json"
     }
   ]
 }
