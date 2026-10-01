@@ -33,6 +33,22 @@
 
 ## 安装
 
+### ⚠️ 关键机制：bundle 必须进 `dsh.profile.bundles` 列表才会生效
+
+LMA 的两个包都声明了 `dsh.bundle.patch`（指向包内 `cordis.patch.yml`），但**这个声明本身不产生任何自动加载**。dsh 加载 bundle 的规则是：
+
+- **只有出现在 profile 的 `dsh.profile.bundles` 列表里的包，它的 `cordis.patch.yml` 才会被应用**。
+- 把包名写进这个列表的，是 `plugin_manager install_bundle`（或 `dsh plugin add`）——它会 pnpm 装包**并自动加进 bundles 列表**。
+- **光 `pnpm add` 装包、不手动加 row、不调 `install_bundle`**，包虽然装了但不在 bundles 列表，**接入点不会生效**。
+
+所以下面三种方式的核心区别是「谁把 LMA 的接入点送进 dsh 的加载链」：
+
+| 方式 | 接入点怎么进加载链 | 适用 |
+|---|---|---|
+| 方式一（手动接入） | 手动把 row 写进 web-app 的 cordis.patch.yml | web 端源码树、想完全掌控 |
+| 方式二（npm + 手动 row） | `pnpm add` 装包，再手动写 row | web 端不想放源码 |
+| 方式三（bundle 安装） | `plugin_manager install_bundle` 自动进 bundles 列表 | 桌面端 / 任何有 plugin_manager 的环境 |
+
 ### 前置：版本对齐（重要）
 
 源码已适配 dsh `0.2.0-rc.2`（含挂载标签实时刷新）。npm 发布版：`latest` = `0.1.1-rc.2`（dsh rc.2），`rc` = `0.2.0-rc.4`（dsh 0.2.0-rc.2）。
@@ -141,11 +157,11 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 
 > npm 安装**省掉了**方式一的第 1、4、5、6~7、8 步：不用手动加 web-app 依赖（`pnpm add` 自动写）、不用改 tsconfig、不用放源码、不用构建。
 
-### 方式三：桌面端接入（bundle 安装，推荐桌面版）
+### 方式三：bundle 安装（`plugin_manager install_bundle`，桌面端 / web 端通用）
 
-桌面端（Electron 打包版）**不用改源码、不用构建**，直接在插件管理器里装 npm 包。LMA 已声明为 bundle（`dsh.bundle.patch` 指向包内 `cordis.patch.yml`），桌面端能自动识别接入点。
+用 dsh 的插件管理器装包，**装包即生效、不用手动改任何 cordis.patch.yml、不用构建**——这是官方为第三方插件设计的正规分发方式。桌面端（Electron 打包版）和 web 端（源码树）都有 `plugin_manager`，走同一条路径：`install_bundle` 会 pnpm 装包**并自动把包名加进 `dsh.profile.bundles` 列表**，于是 LMA 自带的 `cordis.patch.yml` 接入点被加载。
 
-**1. 打开桌面端插件管理器**，安装两个包：
+**1. 打开插件管理器**（桌面端 GUI 或对话里调用），安装两个包：
 
 ```
 @szx-a/dsh-layered-memory-architecture@0.2.0-rc.4
@@ -154,15 +170,15 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 
 （等价于 `plugin_manager install_bundle <包名>`）
 
-**2. 配置记忆数据目录**：LMA 的 bundle 自带 `cordis.patch.yml` 里默认 `root: 'F:/dp/memory-body-data'`。若要用你自己的目录，安装后在桌面端 profile 的 `cordis.patch.yml` 里覆盖 `memory-store` 的 `config.root`。
+**2. 配置记忆数据目录**：LMA 的 bundle 自带 `cordis.patch.yml` 里默认 `root: 'F:/dp/memory-body-data'`。若要用你自己的目录，安装后在 profile 的 `cordis.patch.yml`（桌面端在 `~/.dsh/profiles/desktop/`，web 端在 `~/.dsh/profiles/web/`）里覆盖 `memory-store` 的 `config.root`。
 
-**3. 重启桌面端**，让新 bundle 生效。
+**3. 重启** dsh（桌面端重启应用；web 端 `Ctrl+C` 停掉 `pnpm dsh web` 再重启），让新 bundle 生效。
 
 **4. 初始化体**（同方式一第 10 步）。
 
-> ⚠️ 桌面端安装有两个已知注意点（都是 dsh 桌面版的供应链/分发机制，非 LMA 问题）：
-> - 桌面端 profile 默认走 npmmirror 镜像，可能同步滞后。若"找不到包"，在 profile 目录（`~/.dsh/profiles/desktop/.npmrc`）加 `registry=https://registry.npmjs.org/` 强制走官方源。
-> - dsh 的供应链策略 `minimumReleaseAge` 会拦截**刚发布**的包。若报 `minimumReleaseAge` 违规，在 profile 的 `pnpm-workspace.yaml` 加 `minimumReleaseAgeExclude` 条目（`包名@版本`）豁免，然后在该目录手动 `pnpm install` 重读配置。
+> ⚠️ 用 `install_bundle` 装**刚发布**的包有两个已知注意点（都是 dsh 的分发机制，非 LMA 问题）：
+> - **镜像同步滞后**：profile 默认走 npmmirror 镜像，可能还没同步新版本导致"找不到包"。在 profile 目录加 `.npmrc`（`registry=https://registry.npmjs.org/`）强制走官方源。
+> - **供应链 `minimumReleaseAge` 拦截**：dsh 会拦**刚发布**的包（防供应链攻击）。若报 `minimumReleaseAge` 违规，在 profile 的 `pnpm-workspace.yaml` 加 `minimumReleaseAgeExclude` 条目（`包名@版本`）豁免，然后在 profile 目录手动 `pnpm install` 重读配置。
 
 ---
 
