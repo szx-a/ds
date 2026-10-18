@@ -1,3 +1,7 @@
 import { clientBundle } from '../../client/tsdown.client.ts'
 
-export default clientBundle('@szx-a/dsh-layered-memory-architecture', ['lib/types/index.js'])
+export default clientBundle(
+  import.meta.dirname,
+  ['lib/types/index.js'],
+  { hostPhase: true },
+)

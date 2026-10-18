@@ -1,7 +1,7 @@
 {
   "name": "@szx-a/dsh-layered-memory-architecture-preset",
   "description": "记忆体 preset 侧：模型面向的工具（memory_search/memory_remember）与自动总结",
-  "version": "0.2.0-rc.4",
+  "version": "0.2.1-rc.1",
   "publishConfig": {
     "access": "public"
   },
