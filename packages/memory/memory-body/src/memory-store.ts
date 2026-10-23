@@ -228,6 +228,67 @@ export class MemoryStore extends Service {
     this.persistMounts()
   }
 
+  /**
+   * 展开挂载集为纯体 id 列表（写入用）：挂群 = 群下所有体全挂载，展开为所有体 id。
+   * - 体路径 'group/body' → 'body'
+   * - 群 'group' → 群下所有体 id（全挂载）
+   * - 旧式纯体 id → 自身
+   * 供 parseRemember 匹配显式指定体 + 默认写入目标。
+   */
+  async mountedBodies(owner: SessionOwner | undefined): Promise<string[]> {
+    const bodyIds: string[] = []
+    for (const target of this.mountedFor(owner)) {
+      if (target.includes('/')) {
+        bodyIds.push(target.slice(target.indexOf('/') + 1))
+      } else {
+        const groupBodies = await listBodyIdsInGroup(this.root, target)
+        if (groupBodies.length > 0) bodyIds.push(...groupBodies)
+        else bodyIds.push(target)
+      }
+    }
+    return bodyIds
+  }
+
+  /**
+   * 把挂载目标解析为纯体 id（默认写入目标用）：
+   * - 体路径 'group/body' → 'body'
+   * - 群 'group' → 群内第一个体 id（挂群默认写第一个）
+   * - 旧式纯体 id → 自身（调用方 readBody 验证存在性）
+   */
+  async resolveBodyId(target: string): Promise<string | undefined> {
+    const slash = target.indexOf('/')
+    if (slash >= 0) {
+      const bId = target.slice(slash + 1)
+      return bId === '' ? undefined : bId
+    }
+    const bodyIds = await listBodyIdsInGroup(this.root, target)
+    if (bodyIds.length > 0) return bodyIds[0]
+    return target
+  }
+
+  /** 挂载目标的显示名（dock 标签用）：群 → 群名，体 → 体名，旧体 id → 体名。 */
+  async mountLabel(target: string): Promise<string> {
+    if (target.includes('/')) {
+      const body = await this.readBody(target)
+      if (body !== undefined && body.name !== '') return body.name
+      return target
+    }
+    const group = await this.readGroup(target)
+    if (group !== undefined && group.name !== '') return group.name
+    const body = await this.readBody(target)
+    if (body !== undefined && body.name !== '') return body.name
+    return target
+  }
+
+  /** 挂载集的显示名列表（供 dock 标签显示群名/体名，而非 id）。 */
+  async mountedLabels(sessionId: string): Promise<string[]> {
+    const labels: string[] = []
+    for (const target of this.mountedForSession(sessionId)) {
+      labels.push(await this.mountLabel(target))
+    }
+    return labels
+  }
+
   /* ── 挂载持久化 ─────────────────────────────────────────── */
 
   /** 从 mounts.json 加载会话挂载集（文件不存在或损坏时回退空）。 */

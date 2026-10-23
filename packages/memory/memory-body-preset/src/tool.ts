@@ -112,11 +112,11 @@ export function registerRememberTool(ctx: Context, store: MemoryStore): void {
       render: (_args, value) => [{ type: 'text', text: `Remembered into body ${JSON.stringify(value.bodyId)} (entry ${value.id}).` }],
     },
     async execute(args, exec) {
-      const mountedList = store.mountedFor(exec.agent)
+      const mountedList = await store.mountedBodies(exec.agent)
       if (mountedList.length === 0) {
         throw new Error('no memory body mounted; configure `defaultBodies` in cordis.yml first')
       }
-      // 权限边界：显式指定的体必须属于挂载集，否则拒绝。
+      // 权限边界：显式指定的体必须属于挂载集（挂群展开为群下所有体），否则拒绝。
       let bodyId: string
       if (args.bodyId !== undefined && args.bodyId !== '') {
         if (!mountedList.includes(args.bodyId)) {

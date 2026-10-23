@@ -125,10 +125,10 @@ export class MemoryBodyService extends TypertRemoteService {
     return result
   }
 
-  /** 列出某会话当前挂载的体 id（供 client 显示挂载状态）。 */
+  /** 列出某会话当前挂载的群/体的显示名（供 client 显示挂载状态：挂群显群名、挂体显体名）。 */
   @Remote('listMounted')
   async listMounted(sessionId: string): Promise<string[]> {
-    return this.store.mountedForSession(sessionId)
+    return this.store.mountedLabels(sessionId)
   }
 
   /* ── Remote：AI 自动归置 + 仲裁（P4） ─────────────── */

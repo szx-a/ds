@@ -21,7 +21,8 @@ async function executeRemember(
   store: MemoryStore,
   invocation: CommandInvocation,
 ): Promise<CommandResult> {
-  const parsed = parseRemember(invocation.rawInput, store.mountedFor(invocation.agent))
+  const bodyIds = await store.mountedBodies(invocation.agent)
+  const parsed = parseRemember(invocation.rawInput, bodyIds)
   if (typeof parsed === 'string') return { kind: 'error', text: parsed }
   const body = await store.readBody(parsed.bodyId)
   if (body === undefined) return { kind: 'error', text: `Memory body ${JSON.stringify(parsed.bodyId)} does not exist.` }
@@ -47,16 +48,17 @@ async function executeSummarize(
   const mounted = store.mountedFor(agent)
   if (mounted.length === 0) return { kind: 'error', text: 'No memory body mounted. Configure `defaultBodies` in cordis.yml first.' }
 
-  // 可选目标体：/summarize <体id> 或 /summarize（默认第一个挂载体）
-  const bodyId = parseSummarizeBody(invocation.rawInput, mounted)
-  const body = await store.readBody(bodyId)
-  if (body === undefined) return { kind: 'error', text: `Memory body ${JSON.stringify(bodyId)} does not exist.` }
+  // 可选目标体：/summarize <体id> 或 /summarize（默认第一个挂载体）；挂群展开为所有体。
+  const bodyIds = await store.mountedBodies(agent)
+  const rawBodyId = parseSummarizeBody(invocation.rawInput, bodyIds)
+  const body = await store.readBody(rawBodyId)
+  if (body === undefined) return { kind: 'error', text: `Memory body ${JSON.stringify(rawBodyId)} does not exist.` }
 
-  const result = await summarizeIntoBody(ctx, store, bodyId, agent, invocation.signal)
+  const result = await summarizeIntoBody(ctx, store, rawBodyId, agent, invocation.signal)
   if (!result.ok) {
     return { kind: 'error', text: `Summarization failed: ${result.reason}. Nothing stored.` }
   }
-  return { kind: 'success', text: `Summarized into body ${JSON.stringify(bodyId)} (entry ${result.entryId}).` }
+  return { kind: 'success', text: `Summarized into body ${JSON.stringify(rawBodyId)} (entry ${result.entryId}).` }
 }
 
 /* ------------------------------------------------------------------ /forget */
