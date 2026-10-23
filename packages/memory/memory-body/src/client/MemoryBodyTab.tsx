@@ -148,24 +148,24 @@ export function MemoryBodyTab(props: MemoryBodyTabInjected): ReactNode {
       <div style={{ fontWeight: 600 }}>记忆体（群 - 体 - 词条）</div>
 
       {/* 群创建表单 */}
-      <div style={{ display: 'flex', gap: 6 }}>
-        <input placeholder="群 id（如 physics）" value={groupId} onChange={e => setGroupId(e.target.value)} />
-        <input placeholder="群名（如 Physics 物理域）" value={groupName} onChange={e => setGroupName(e.target.value)} />
-        <input placeholder="群描述（可选）" value={groupDescription} onChange={e => setGroupDescription(e.target.value)} />
-        <button type="button" onClick={createNewGroup}>创建群</button>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input style={{ minWidth: 140, flex: '1 1 140px' }} placeholder="群 id（如 physics）" value={groupId} onChange={e => setGroupId(e.target.value)} />
+        <input style={{ minWidth: 140, flex: '1 1 140px' }} placeholder="群名（如 Physics 物理域）" value={groupName} onChange={e => setGroupName(e.target.value)} />
+        <input style={{ minWidth: 140, flex: '1 1 140px' }} placeholder="群描述（可选）" value={groupDescription} onChange={e => setGroupDescription(e.target.value)} />
+        <button type="button" onClick={createNewGroup} style={{ flexShrink: 0 }}>创建群</button>
       </div>
 
       {/* 体创建表单 */}
-      <div style={{ display: 'flex', gap: 6 }}>
-        <input placeholder="体 id（小写字母/数字/连字符）" value={bodyId} onChange={e => setBodyId(e.target.value)} />
-        <input placeholder="体名" value={bodyName} onChange={e => setBodyName(e.target.value)} />
-        <input placeholder="体描述（可选）" value={bodyDescription} onChange={e => setBodyDescription(e.target.value)} />
-        <select value={bodyGroup} onChange={e => setBodyGroup(e.target.value)}>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input style={{ minWidth: 130, flex: '1 1 130px' }} placeholder="体 id（小写字母/数字/连字符）" value={bodyId} onChange={e => setBodyId(e.target.value)} />
+        <input style={{ minWidth: 110, flex: '1 1 110px' }} placeholder="体名" value={bodyName} onChange={e => setBodyName(e.target.value)} />
+        <input style={{ minWidth: 130, flex: '1 1 130px' }} placeholder="体描述（可选）" value={bodyDescription} onChange={e => setBodyDescription(e.target.value)} />
+        <select value={bodyGroup} onChange={e => setBodyGroup(e.target.value)} style={{ minWidth: 110, flex: '1 1 110px' }}>
           {groups.length === 0
             ? <option value="general">general</option>
             : groups.map(g => <option key={g.id} value={g.id}>{g.name || g.id}</option>)}
         </select>
-        <button type="button" onClick={create}>创建体</button>
+        <button type="button" onClick={create} style={{ flexShrink: 0 }}>创建体</button>
       </div>
 
       {error !== null ? <div style={{ color: '#d33' }}>{error}</div> : null}
