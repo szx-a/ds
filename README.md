@@ -1,6 +1,6 @@
 # dsh 记忆体（Memory Body）插件
 
-> 社区体验版 · 跨会话记忆：多体 + 挂载 + 自动总结 + FTS5 检索
+> 社区体验版 · LMA 分层记忆架构：群-体-词条三层 + 挂载 + 自动总结 + 向量检索
 >
 > 这是 GitHub Discussions [#1822（记忆体 Memory Body）](https://github.com/deepseek-ai/deepseek-harness/discussions/1822) 提案的一个可运行实现。
 
@@ -8,14 +8,16 @@
 
 ## 这是什么
 
-一个 DeepSeek Harness 的记忆插件，实现「命名、跨会话、隔离、可挂载」的记忆单元（Memory Body）：
+一个 DeepSeek Harness 的记忆插件，实现 **LMA（Layered Memory Architecture）分层记忆架构**——「群（Group）→ 体（Body）→ 词条（Entry）」三层记忆树：
 
-- **多个记忆体（body）**：每个体是一组相关记忆，物理上是一个目录 + JSONL 文件
-- **挂载（mount）**：控制当前会话能检索哪些体（数据永久、挂载按会话）
+- **记忆群（group）**：顶层领域隔离域（如 Physics 物理域、Literature 文学域），物理上是一个目录
+- **记忆体（body）**：群内的主题容器（如 Physics 下的 QuantumMechanics），物理上是群目录下的子目录 + JSONL
+- **词条（entry）**：底层的原子记忆单元（文本块 + 向量）
+- **挂载（mount）**：控制当前会话能检索哪些群/体（`/mount physics` 挂群、`/mount physics/quantum` 挂体）
 - **双权威**：`user`（用户钦定的文档）vs `model`（模型自动总结的经验）
 - **自动总结**：把会话提炼成经验写入记忆体
-- **GUI + 后台 JSONL 双编辑**：既能在设置页管体，也能直接改文件
-- **FTS5 全文检索**：中英文 3 字以上任意子串命中
+- **GUI + 后台 JSONL 双编辑**：既能在设置页管群/体，也能直接改文件
+- **检索**：FTS5 粗筛 + 向量精排（有 embedding 时），中英文 3 字以上任意子串命中
 
 核心闭环：/remember → 存储 → memory_search → 检索。
 
@@ -23,11 +25,16 @@
 
 ## 特性
 
-- 多体 + 挂载：`/mount` `/unmount` 按会话挂载
-- 降权不删除：`/forget` 只标记失效（superseded），历史可追溯、可恢复
-- 事件溯源：JSONL 权威层 + SQLite FTS5 可重建读模型（索引可丢弃、可重建）
-- 中文检索：FTS5 `trigram` 分词器，3 字以上任意子串命中
-- 三平面架构：host（存储 + 命令 + Remote）+ preset（工具）+ client（GUI）
+- **群-体-词条三层**：自顶向下公理切割（族 ⊃ 簇 ⊃ 向量），归属关系是唯一刚性公理——词条不跨体、体不跨群
+- **群级物理隔离**：每群独立目录 + 独立 FTS5 索引，检索只进相关群，未命中群物理不参与计算
+- **公理锚向量**：群/体创建时定义领域/主题锚向量（非聚类质心），树状多族路由（群锚 → 体锚 → 词条级）
+- **AI 自动建群建体**：冷启动零配置，阈值 + AI 语义双重判定——一致自动、冲突上抛人工仲裁面板
+- **多体 + 挂载**：`/mount` `/unmount` 按会话挂载（支持群和体两种粒度）
+- **降权不删除**：`/forget` 只标记失效（superseded），历史可追溯、可恢复
+- **事件溯源**：JSONL 权威层 + SQLite FTS5 可重建读模型（索引可丢弃、可重建）
+- **中文检索**：FTS5 `trigram` 分词器，3 字以上任意子串命中
+- **可插拔 Embedder**：有 embedding 时向量精排，无时 FTS5 兜底（功能不丢）
+- **三平面架构**：host（存储 + 命令 + Remote）+ preset（工具）+ client（GUI）
 
 ---
 
@@ -81,13 +88,14 @@ LMA 的两个包都声明了 `dsh.bundle.patch`（指向包内 `cordis.patch.yml
 >
 > ⚠️ `defaultBodies` 是**默认挂载清单，不是创建命令**：`code` 只是示例名，可改成任意体 id（如 `[physics]`），但该体**必须先在磁盘上创建**（设置页建，或手动建 `body.json`），否则 `/remember` 会报 `does not exist`。
 
-**3. `packages/preset/agent-presets/presets/standard/agent.cordis.yml`**（⚠️ 0.1.2 新路径，旧版在 `apps/cli/config/agent-presets/standard/`）—— 末尾加 1 个 row（preset 平面）：
+**3. `packages/bundle/web-app/presets/standard.patch.yml`**（⚠️ 0.2.0 新路径，旧版在 `packages/preset/agent-presets/presets/standard/agent.cordis.yml`）—— 在 `preset-standard` 的 `config.plugins` 数组末尾加 1 个条目：
 
 ```yaml
-- id: memory-body-preset
-  name: '@szx-a/dsh-layered-memory-architecture-preset'
-  config:
-    autoSummarize: false
+          # LMA 记忆体：模型面向的工具 + 自动总结
+          - id: memory-body-preset
+            name: '@szx-a/dsh-layered-memory-architecture-preset'
+            config:
+              autoSummarize: false
 ```
 
 **4. `tsconfig.host.json`** —— `references` 加 2 行：
@@ -110,16 +118,14 @@ packages/memory/memory-body/           # host 包：存储 + 命令 + Remote + G
 packages/memory/memory-body-preset/    # preset 包：工具 + 自动总结
 ```
 
-**8. 构建**（在 harness 根目录，必须跑 host + client 两个 face）：
+**8. 构建**（在 harness 根目录，⚠️ 0.2.1 起用统一编排 `build:official`，不能手动拆 tsc）：
 
 ```bash
-pnpm run clean                 # 更新版本后先清旧 lib 产物
-pnpm install
-pnpm run build:lib:host        # tsc -b tsconfig.host.json && tsdown --env.DSH_BUILD_FACE host
-pnpm run build:lib:client      # tsc -b tsconfig.client.json && tsdown --env.DSH_BUILD_FACE client
+corepack pnpm install           # 0.2.1 起用 corepack pnpm 满足版本要求（pnpm 11.28.5）
+corepack pnpm run build:official # = tsx scripts/build.ts --profile official（9 gate 全链路）
 ```
 
-> 只跑 host face 会让 `dsh web` 报 `MissingClientBundleError`（缺全图 `lib/client.js`）。
+> ⚠️ 0.2.1 的构建方式变了：不能再手动拆 `tsc -b tsconfig.host.json` + `tsc -b tsconfig.client.json`——那样会跳过 Typert 的 remote 类型生成，报几十个 `Cannot find module '@xxx/remote'` 假错误。用 `build:official` 或 `typecheck`（生成 Typert 声明 + 类型检查）。
 
 **9. 重启**：`Ctrl+C` 停掉 `pnpm dsh web` 再重启（命令在 node 进程启动时注册，只刷新浏览器不会加载）。
 
@@ -189,11 +195,14 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 | 命令 | 作用 | 示例 |
 |---|---|---|
 | `/remember <内容>` | 存一条你钦定的记忆 | `/remember 用 pnpm 构建，别用 npm` |
-| `/remember <体id> <内容>` | 存到指定体 | `/remember physics 牛顿三定律` |
+| `/remember <体id> <内容>` | 存到指定体 | `/remember quantum 薛定谔方程` |
 | `/summarize` | 把当前对话总结成经验存下 | `/summarize` |
 | `/forget <关键词>` | 降权（不删除，检索跳过） | `/forget 测试` |
-| `/mount <体id>` | 把体挂到**当前会话** | `/mount physics` |
-| `/unmount <体id>` | 从当前会话卸下（数据保留） | `/unmount code` |
+| `/mount <群id>` | 把整个群挂到**当前会话** | `/mount physics` |
+| `/mount <群id>/<体id>` | 把群里某个体挂到当前会话 | `/mount physics/quantum` |
+| `/unmount <群id 或 群id/体id>` | 从当前会话卸下（数据保留） | `/unmount code` |
+
+> ⚠️ v2 起 `/mount` 支持群和体两种粒度：单段（`physics`）= 挂整个群，两段（`physics/quantum`）= 挂群里某个体。旧式单段体 id（如 `code`）仍兼容，自动定位其归属群。
 
 ### 记忆写到哪里？（默认写入目标）
 
@@ -201,8 +210,8 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 
 **先分清三个动作**：
 
-- **建体**（设置页建，或手动建 `body.json`）= 创建，只在磁盘生成一个体，**不等于授权**
-- **挂载**（`/mount`）= 授权，「这个会话能读写这个体」
+- **建群/建体**（设置页建，或手动建 `group.json` / `body.json`）= 创建，只在磁盘生成，**不等于授权**
+- **挂载**（`/mount`）= 授权，「这个会话能读写这些群/体」
 - **写入**（`/remember` `/summarize`）= 实际存内容
 
 只有**挂载**的体才能被写。刚建好的体**不会自动挂载**，要先 `/mount <体id>`。所以「在 GUI 里建了体」之后直接 `/remember` 会报 `No memory body mounted` —— 那不是体不存在，是还没挂载。
@@ -267,28 +276,78 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 
 ```
 <root>/
-  <bodyId>/            # 一个体 = 一个目录
-    body.json          # 体元数据（name/description/kind/trust）
-    entries.jsonl      # 记忆条目，一行一条，append-only
+  <groupId>/           # 一个群 = 一个目录（物理隔离单元）
+    group.json         # 群元数据（name/description/anchorRef）
+    anchor.vec         # 群公理锚向量（二进制）
+    index.sqlite       # 群级 FTS5 索引（每群独立）
+    <bodyId>/          # 一个体 = 群下的一个子目录
+      body.json        # 体元数据（groupId/name/description/kind/trust）
+      anchor.vec       # 体公理锚向量（二进制）
+      entries.jsonl    # 记忆条目，一行一条，append-only
+  mounts.json          # 会话挂载集
 ```
 
 ---
 
 ## 架构（LMA — Layered Memory Architecture）
 
-2 个包（host + preset）+ 3 个加载平面：
+### 核心范式：自顶向下公理切割
+
+LMA 与所有主流记忆系统（RAG / HNSW / K-Means / RAPTOR / Mem0）的本质区别：
+
+| | 主流（自底向上聚类） | LMA（自顶向下公理切割） |
+|---|---|---|
+| 边界怎么来 | 度量距离、算法打包（概率涌现） | 用户/AI 基于领域知识**公理定义** |
+| 边界性质 | 模糊、会漂移 | 刚性、锁死 |
+| 数学基础 | 度量空间 + 概率密度估计 | 离散拓扑 + 集合论 |
+| 不确定时 | 用概率硬猜 | 上抛人工仲裁 |
+
+**族 ⊃ 簇 ⊃ 向量** 是绝对的拓扑包含关系，不依赖概率计算，依赖群/体的创建。归属关系（∈）是唯一刚性公理——词条不跨体、体不跨群；内容柔性（边界内自由演化）；增删是主权事件（AI 增删需人工批准）。
+
+### 三层拓扑
+
+```
+记忆群 Group = 族 Family   →  领域公理锚向量
+记忆体 Body  = 簇 Cluster  →  主题公理锚向量
+词条 Entry   = 向量 Vector →  内容 embedding
+```
+
+- **公理锚（非质心）**：群/体锚是创建时定义的领域/主题概念向量，稳定不漂移
+- **物理隔离**：每群独立目录 + 独立 FTS5 索引 + 独立锚文件
+
+### 检索：树状多族路由
+
+```
+查询向量 → 群锚路由（多族并行）→ 命中群内体锚路由 → 簇内词条级检索
+```
+
+| 模式 | 挂载 | 复杂度 |
+|---|---|---|
+| 模式 1 | 无（AI 自动建群） | O(log K)，树状路由 |
+| 模式 2 | 挂 q 个群 | 子空间坍缩，降一级 |
+| 模式 3 | 挂 r 个体 | O(1) 哈希直连 |
+
+有 embedding 时向量精排，无时 FTS5 兜底（可插拔 Embedder，功能不丢）。
+
+### 主权与创建
+
+- **挂载**：手动 > 自动；`/mount physics`（群）/ `/mount physics/quantum`（体）
+- **创建**：AI / 用户 / 半自动三方；冷启动零配置（AI 自动建群建体）
+- **三级确定性裁决**：阈值+AI语义一致→自动；冲突→人工仲裁面板（同意归入 AI 建议 / 新建群 / 手动指定群）
+
+### 2 个包 + 3 个加载平面
 
 ```
 ┌─ host 平面（cordis.patch.yml）─────────────────────────────┐
-│  memory-store   共享存储服务（JSONL + FTS5）               │
-│  memory-body    Remote（体管理 GUI）+ /remember 等命令     │
+│  memory-store   共享存储服务（群/体 JSONL + 群级 FTS5 + 锚） │
+│  memory-body    Remote（群/体管理 GUI）+ /remember 等命令   │
 └────────────────────────────────────────────────────────────┘
-┌─ agent preset（agent.cordis.yml）──────────────────────────┐
+┌─ agent preset（standard.patch.yml）────────────────────────┐
 │  memory-body-preset   工具（search/remember/forget/correct）│
 │                        + 自动总结                          │
 └────────────────────────────────────────────────────────────┘
 ┌─ client（dsh.client + exports["./client"]）────────────────┐
-│  设置页「记忆体」tab + 自 mount Remote                     │
+│  设置页「记忆体」tab（群-体两层管理）+ 仲裁面板 + 自 mount  │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -296,15 +355,16 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 
 | 组件 | 形态 | 职责 |
 |---|---|---|
-| `MemoryStore` | Service 类 | 共享存储：JSONL + FTS + 挂载集 |
-| `MemoryBodyService` | TypertRemoteService | 体管理 Remote + 命令注册 |
+| `MemoryStore` | Service 类 | 共享存储：群/体 JSONL + 群级 FTS + 挂载集 + 树状路由 + 仲裁队列 |
+| `MemoryBodyService` | TypertRemoteService | 群/体管理 Remote + 归置/仲裁 Remote + 命令注册 |
 | preset 插件 | namespace plugin | 工具 + 自动总结 |
-| client 插件 | 双面 React 插件 | GUI + 自 mount Remote |
+| client 插件 | 双面 React 插件 | GUI（群-体管理 + 仲裁面板）+ 自 mount Remote |
 
 ### 存储：事件溯源
 
 - **权威层**：JSONL（append-only、可手改、可审计）
-- **读模型**：SQLite FTS5（可丢弃、每次 search 前从 JSONL 重建）
+- **读模型**：SQLite FTS5（可丢弃、每次 search 前从 JSONL 重建；**每群独立 index.sqlite**）
+- **锚向量**：`.vec` 二进制文件（群锚 `<group>/anchor.vec`，体锚 `<group>/<body>/anchor.vec`）
 - **降权不删除**：supersede 追加标记行，同 id 折叠取最新
 - **双权威**：`user`（用户钦定，只读）/ `model`（模型总结，可编辑）
 
@@ -314,25 +374,28 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 
 | 维度 | 作用域 | 说明 |
 |---|---|---|
-| 体（body） | 全局共享 | 一个 root，所有工作区/会话可见同一套体 |
-| 挂载（mount） | 按会话 | 每个会话挂载自己的子集，互不影响 |
+| 群（group） | 全局共享 | 顶层领域隔离域，物理目录 |
+| 体（body） | 全局共享（群内） | 一个 root，所有工作区/会话可见同一套群/体 |
+| 挂载（mount） | 按会话 | 每个会话挂载自己的子集（群或体），互不影响 |
 | 默认挂载集 | 全局 | `defaultBodies` 对所有新会话生效 |
 
-> 隔离靠「体本身」（独立目录 + 独立 JSONL），不靠工作区限制 —— 用户通过「建体 + 挂载」自由管理，而非系统预设边界。
+> 隔离靠「群/体本身」（独立目录 + 独立索引 + 独立 JSONL），不靠工作区限制 —— 用户通过「建群/建体 + 挂载」自由管理，而非系统预设边界。
 
 **挂载机制**：
 
-- **建体 ≠ 挂载**：建体只是磁盘生成 body.json，挂载才是「授权会话读写」
+- **建群/建体 ≠ 挂载**：建只是磁盘生成，挂载才是「授权会话读写」
 - **挂载累加**：`/mount` 插到最前（最近挂载 = 默认写入目标），`/unmount` 只删单个
 - **挂载持久化**：会话挂载集存 `root/mounts.json`，`/mount` `/unmount` 立即落盘；会话重启自动恢复，新会话回退默认
 
 ### 设计取舍
 
-1. **隔离在存储层，而非检索层** —— 记忆按体分开存放，挂载圈定范围，从源头不乱炖
-2. **双权威 vs 混在一起** —— user/model 严格分层
-3. **降权不删除 vs 覆盖** —— 可审计可回滚
-4. **GUI + JSONL 双编辑 vs 黑盒** —— 透明可手改
-5. **事件溯源 vs 单一数据库** —— 索引可重建
+1. **自顶向下公理切割 vs 自底向上聚类** —— 边界靠定义锁死，不靠度量维持、不漂移
+2. **隔离在存储层（物理）** —— 每群独立目录/索引，未命中群物理不参与计算
+3. **双权威 vs 混在一起** —— user/model 严格分层
+4. **降权不删除 vs 覆盖** —— 可审计可回滚
+5. **GUI + JSONL 双编辑 vs 黑盒** —— 透明可手改
+6. **事件溯源 vs 单一数据库** —— 索引可重建
+7. **可插拔 Embedder vs 强绑定** —— 有 embedding 向量精排，无则 FTS5 兜底
 
 ---
 
@@ -369,19 +432,20 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 
 1. **检索最短 3 字符**：trigram 天生不支持 2 字及以下的搜索（`中文` 返回空）
 2. **自动总结默认关**：`autoSummarize: false`，需手动开启
-3. **安装门槛**：npm 安装仍需手动改 2 个接入文件（cordis.patch.yml / agent.cordis.yml），未接入一键安装通道
+3. **真实 embedding 未接**：树状路由/向量精排的可插拔 Embedder 接口已就位，但真实 embedding 模型（本地 onnx / 官方服务）尚未接入；当前默认 NullEmbedder 降级为纯 FTS5 检索（功能完整，向量增强待接模型）
 
 ### 测试
 
-- **单元测试未补**：`store.ts` / `fts.ts` / `parse.ts` 是纯函数，尚未补测试
+- **26 个单元测试**：`p0`~`p4.spec.ts` 覆盖迁移/挂载展开/群级 FTS/embedding 降级/锚向量/双重判定，全部通过（`node --import tsx --test`）
 
 ### 后续开发（按优先级）
 
-1. **记忆提供者接口**：让第三方记忆插件（dsh-memory-evolve / EchoCore 等）挂 LMA 之上，PLM「地基插件」定位验证点
-2. **挂载体元信息注入**：模型只加载已挂载体的 `id + 描述`
-3. **量化对比数据**：benchmark（token 节省量、检索命中率）
-4. **向量检索**：`BodyKind` 已预留 `vector` 扩展位，混合检索
+1. **接入真实 embedding 模型**：实现 `Embedder` 接口（本地 onnx 小模型或官方 embedding 服务），激活树状多族路由 + 向量精排
+2. **记忆提供者接口**：让第三方记忆插件（dsh-memory-evolve / EchoCore 等）挂 LMA 之上，PLM「地基插件」定位验证点
+3. **AI 自动归置的 LLM 语义判定**：`autoPlace` 的 `aiVerdict` 目前由调用方传入，尚未接 LLM 自动判断「归入现有 or 新建」的语义
+4. **量化对比数据**：benchmark（token 节省量、检索命中率、树状路由 vs 扁平检索的性能对比）
 5. **权重自然衰减**：`weight` 字段支持记忆自然衰减
+6. **挂载体元信息注入**：模型只加载已挂载体的 `id + 描述`
 
 ---
 
@@ -570,20 +634,25 @@ pnpm dsh web --no-open --port 0
 
 ## 目录结构
 
-### LMA 源码（两个版本相同，官方从未改动）
+### LMA 源码
 
 ```
 packages/memory/
 ├── memory-body/                 # host 包 @szx-a/dsh-layered-memory-architecture
 │   └── src/
-│       ├── index.ts             # MemoryBodyService（Remote + 命令注册）
-│       ├── memory-store.ts      # MemoryStore（共享存储服务）
-│       ├── store.ts             # JSONL 权威存储（纯函数）
-│       ├── fts.ts               # FTS5 检索（trigram）
-│       ├── command.ts           # /remember /summarize /forget /mount /unmount
+│       ├── index.ts             # MemoryBodyService（群/体管理 Remote + 归置/仲裁 Remote + 命令注册）
+│       ├── memory-store.ts      # MemoryStore（共享存储服务 + 树状路由 + 仲裁队列）
+│       ├── store.ts             # JSONL 权威存储（纯函数，群/体目录 + 挂载展开）
+│       ├── group.ts             # 群存储（group.json 读写）
+│       ├── migrate.ts           # 迁移（旧版裸体归 default 群，幂等）
+│       ├── embed.ts             # 可插拔 Embedder + NullEmbedder 降级 + 余弦相似度
+│       ├── anchor.ts            # 公理锚向量二进制持久化（.vec）
+│       ├── placement.ts         # 阈值 + AI 语义双重判定（三级裁决）
+│       ├── fts.ts               # FTS5 检索（trigram，群级独立索引）
+│       ├── command.ts           # /remember /summarize /forget /mount /unmount（群/体粒度）
 │       ├── summarize.ts         # 总结逻辑
 │       ├── parse.ts             # 输入解析
-│       └── client/              # GUI（记忆体 tab）
+│       └── client/              # GUI（群-体管理 tab + 仲裁面板）
 └── memory-body-preset/          # preset 包（-preset 后缀）
     └── src/
         ├── index.ts             # 工具 + 自动总结装配
@@ -591,18 +660,18 @@ packages/memory/
         └── auto-summarize.ts    # 自动总结触发
 ```
 
-> LMA 自己的源码目录在 0.1.1-rc.2 到 0.2.0 里**完全一致**——官方重构从没碰过 `packages/memory/`（实测从 alpha.1 到 0.2.0-rc.2 全程对 `packages/memory/` 零改动）。变的是下面的**接入点**。
+> v2 起 LMA 源码不再是「官方零改动」——新增了群层相关文件（group/migrate/embed/anchor/placement/ArbitrationPanel），这些是 LMA 自己的架构演进，非官方重构所致。
 
 ### 接入点目录（dsh 版本不同，路径不同）
 
-| 接入点 | 0.1.1-rc.2（旧） | 0.2.0（新） |
+| 接入点 | 0.1.1-rc.2（旧） | 0.2.x（新） |
 |---|---|---|
 | host 行（memory-store / memory-body） | `packages/bundle/web-app/cordis.patch.yml` | `packages/bundle/web-app/cordis.patch.yml`（不变） |
-| preset 行（memory-body-preset） | `apps/cli/config/agent-presets/standard/agent.cordis.yml` | **`packages/preset/agent-presets/presets/standard/agent.cordis.yml`**（⚠️ 迁移） |
+| preset 行（memory-body-preset） | `apps/cli/config/agent-presets/standard/agent.cordis.yml` | **`packages/bundle/web-app/presets/standard.patch.yml`**（⚠️ 0.2.0 起改为 plugins 数组声明） |
 | web-app 依赖 | `packages/bundle/web-app/package.json` | `packages/bundle/web-app/package.json`（不变） |
 | tsconfig references | `tsconfig.host.json` / `tsconfig.client.json` | `tsconfig.host.json` / `tsconfig.client.json`（不变） |
 
-> 0.1.2 里 `agent-presets` 目录从 `apps/cli/config/` 整体迁移到了 `packages/preset/`，所以 preset 接入点路径变了；其余三个接入点路径不变。完整 9 处适配见上方「LMA 适配新版本的步骤」。
+> preset 接入点经历两次迁移：0.1.2 从 `apps/cli/config/` 移到 `packages/preset/`，0.2.0 又改为 `packages/bundle/web-app/presets/standard.patch.yml` 的 plugins 数组声明方式。完整适配见上方「LMA 适配新版本的步骤」。
 
 ---
 
