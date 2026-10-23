@@ -58,7 +58,7 @@ LMA 的两个包都声明了 `dsh.bundle.patch`（指向包内 `cordis.patch.yml
 
 ### 前置：版本对齐（重要）
 
-源码已适配 dsh `0.2.1-rc.2`（含挂载标签实时刷新）。npm 发布版：`latest` = `0.1.1-rc.2`（dsh rc.2），`rc` = `0.3.0-rc.1`（dsh 0.2.1-rc.2，**v2 群-体-词条三层架构**）。
+源码已适配 dsh `0.2.1-rc.2`（含挂载标签实时刷新）。npm 发布版：`latest` = `0.1.1-rc.2`（dsh rc.2），`rc` = `0.3.0-rc.3`（dsh 0.2.1-rc.2，**v2 群-体-词条三层架构**）。
 
 ### 方式一：手动接入（当前可用的方式）
 
@@ -142,15 +142,15 @@ corepack pnpm run build:official # = tsx scripts/build.ts --profile official（9
 
 npm 已发布两个包，**基于 dsh `0.2.1-rc.2`**（`rc` tag），适合 web 端**不想放源码、不想自己构建**的情况（npm 包已含编译好的 `lib/` 产物和类型声明）。
 
-- `@szx-a/dsh-layered-memory-architecture@0.3.0-rc.1`
-- `@szx-a/dsh-layered-memory-architecture-preset@0.3.0-rc.1`
+- `@szx-a/dsh-layered-memory-architecture@0.3.0-rc.3`
+- `@szx-a/dsh-layered-memory-architecture-preset@0.3.0-rc.3`
 
-> ⚠️ `latest` tag 仍是 `0.1.1-rc.2`（dsh rc.2 旧版）。装 0.3.0 版需显式写 `@0.3.0-rc.1` 或 `@rc`。
+> ⚠️ `latest` tag 仍是 `0.1.1-rc.2`（dsh rc.2 旧版）。装 0.3.0 版需显式写 `@0.3.0-rc.3` 或 `@rc`。
 
 **1. 安装两个包**（装到 web-app bundle）：
 
 ```bash
-pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architecture@0.3.0-rc.1 @szx-a/dsh-layered-memory-architecture-preset@0.3.0-rc.1
+pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architecture@0.3.0-rc.3 @szx-a/dsh-layered-memory-architecture-preset@0.3.0-rc.3
 ```
 
 **2. 改 `packages/bundle/web-app/cordis.patch.yml`**（同方式一第 2 步）：加 `memory-store` + `memory-body` 两个 row。
@@ -170,8 +170,8 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 **1. 打开插件管理器**（桌面端 GUI 或对话里调用），安装两个包：
 
 ```
-@szx-a/dsh-layered-memory-architecture@0.3.0-rc.1
-@szx-a/dsh-layered-memory-architecture-preset@0.3.0-rc.1
+@szx-a/dsh-layered-memory-architecture@0.3.0-rc.3
+@szx-a/dsh-layered-memory-architecture-preset@0.3.0-rc.3
 ```
 
 （等价于 `plugin_manager install_bundle <包名>`）
@@ -219,20 +219,21 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 **挂载是累加，可挂多个**（`/unmount` 只删那一个，不影响其他）：
 
 ```
-/mount physics         → [physics]                     # 挂整个群：检索范围 = 群下所有体
-/mount physics/quantum → [physics/quantum, physics]    # 挂群里某个体：后挂的插到最前
+/mount physics         → 群下所有体全挂载（检索 + 写入都覆盖全群）
+/mount physics/quantum → 只挂群里某个体（后挂的插到最前）
 ```
 
-> ⚠️ **「挂群」和「挂体」的粒度不同**：
-> - `/mount physics`（单段）挂的是**群**，`memory_search` 会检索群下**所有**体；
-> - `/mount physics/quantum`（两段）挂的是群里**某个体**，只检索这个体。
+> ⚠️ **挂群 vs 挂体**：
+> - `/mount physics`（单段）挂**群** = 群下**所有体全挂载**：`memory_search` 检索覆盖所有体，写入默认落到群内第一个体；
+> - `/mount physics/quantum`（两段）挂群里**某个体**，只检索/写入这个体。
 >
-> 但**写入必须落到具体的体**（词条属于体，不属于群）。所以建议写入时精确挂体（`/mount 群/体`），或用 `/remember <体id> <内容>` 显式指定体。
+> 输入框底部的挂载标签会显示**群名**（挂群时）或**体名**（挂体时）。
 
-**默认写入「最近挂载的体」**（挂载集里第一个**体**）：
+**默认写入「最近挂载的体」**（挂载集里第一个体）：
 
 - 刚启动、没挂过任何体 → 挂载集 = `defaultBodies`（默认 `[code]`），默认写 `code`
-- `/mount physics/quantum` → 把 `physics/quantum` 插到最前，默认写它
+- `/mount physics`（挂群）→ 群下所有体全挂载，默认写群内**第一个体**
+- `/mount physics/quantum`（挂体）→ 默认写它
 
 **群/体必须先存在**：默认目标体（或任何你指定的体）若没创建，`/remember` `/summarize` 会报 `Memory body "xxx" does not exist`，**不会自动创建**。
 
@@ -241,7 +242,7 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 - `/remember <体id> <内容>` → 存到指定体
 - `/summarize <体id>` → 总结到指定体
 
-> ⚠️ 显式指定的体**也必须已挂载**：`/remember x 内容` 里若 `x` 长得像体 id（全小写字母数字/连字符）却未挂载，会**报错** `Memory body "x" is not mounted`，不会静默当文本。所以先 `/mount 群/x` 再点名。
+> ⚠️ 显式指定的体**也必须已挂载**：`/remember x 内容` 里若 `x` 长得像体 id（全小写字母数字/连字符）却未挂载，会**报错** `Memory body "x" is not mounted`，不会静默当文本。挂群后群内任意体都算已挂载，可直接点名。
 
 **所有操作的默认目标一览**（命令 + 模型工具都遵循同一规则）：
 
@@ -253,15 +254,15 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 | 自动总结 | model | 最近挂载的体 |
 | `memory_search`（模型自动） | — | 搜**所有**挂载的群/体 |
 
-**核心规则一句话**：所有写入（命令和模型工具）默认写到「**最近挂载的体**」——因为 `/mount` 会把目标插到挂载集最前。想写别的体就显式指定体 id；想扩大检索范围就挂群。
+**核心规则一句话**：所有写入（命令和模型工具）默认写到「**最近挂载的体**」——因为 `/mount` 会把目标插到挂载集最前。想写别的体就显式指定体 id；想覆盖整群就挂群（默认写群内第一个体）。
 
-**举例**（挂 `physics/quantum` 和 `code` 两个体）：
+**举例**（假设 `physics` 群下有 `quantum`、`relativity` 两个体，另有 `code` 体）：
 
-| 操作 | 挂载集 | `/remember 内容` 存到 | `/remember code 内容` 存到 |
+| 操作 | 挂载（展开后） | `/remember 内容` 存到 | `/remember relativity 内容` 存到 |
 |---|---|---|---|
-| （无操作） | `[code]` | `code` | `code` |
-| `/mount physics/quantum` | `[physics/quantum, code]` | `physics/quantum` | `code` |
-| `/mount physics/quantum` 后 `/unmount code` | `[physics/quantum]` | `physics/quantum` | ❌ 报错 `code` 未挂载 |
+| （无操作） | `[code]` | `code` | ❌ 报错 `relativity` 未挂载 |
+| `/mount physics`（挂群） | `[quantum, relativity]` | `quantum`（第一个体） | `relativity` ✅ |
+| `/mount physics/quantum`（挂体） | `[quantum, code]` | `quantum` | ❌ 报错 `relativity` 未挂载 |
 
 ### 模型工具（自动调用，无需手动）
 
@@ -272,8 +273,8 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 
 ### GUI
 
-- **设置页 → 「记忆体」tab**：查看体列表、新建体、删除体、查看条目
-- **输入框 dock 挂载标签**：聊天输入框附近实时显示当前会话挂载的记忆体（如「记忆体：code, physics」），`/mount` `/unmount` 后自动刷新
+- **设置页 → 「记忆体」tab**：查看群/体列表、新建群/体、删除群/体、查看条目
+- **输入框 dock 挂载标签**：聊天输入框附近实时显示当前会话挂载的记忆（挂群显示**群名**、挂体显示**体名**），`/mount` `/unmount` 后自动刷新
 
 ### 后台编辑
 
@@ -418,7 +419,7 @@ LMA 与所有主流记忆系统（RAG / HNSW / K-Means / RAPTOR / Mem0）的本�
 8. 官方版本号跳到 `v0.1.5-rc.2`（跳过 0.1.3/0.1.4），主体已更新到 0.1.5-rc.2 并跑通（9 处适配全程零改动）
 9. 官方跨 0.1.6/0.1.7 到 `v0.2.0-rc.2`，主体已更新到 0.2.0-rc.2 并跑通（0.2.0 有 4 处适配：preset 声明方式重构、summarize kind 类型、tsconfig 子项目路径、micromark override）
 10. 官方出 `v0.2.1-rc.2`，主体已更新到 0.2.1-rc.2 并跑通（0.2.1 仅 1 处适配：tsdown.config.ts 的 clientBundle 参数改 import.meta.dirname；构建方式改为 build:official 统一编排）；npm 发布 `0.2.1-rc.1`
-11. LMA 正式架构升级到 **v2 群-体-词条三层**（自顶向下公理切割：族⊃簇⊃向量、公理锚、树状多族路由、群级物理隔离、AI 自动建群 + 阈值/语义双重判定 + 人工仲裁面板）；npm 发布 `0.3.0-rc.1`
+11. LMA 正式架构升级到 **v2 群-体-词条三层**（自顶向下公理切割：族⊃簇⊃向量、公理锚、树状多族路由、群级物理隔离、AI 自动建群 + 阈值/语义双重判定 + 人工仲裁面板）；npm 发布 `0.3.0-rc.3`
 
 ### 关键踩坑（已固化到 `RECOVERY.md`）
 
@@ -459,7 +460,7 @@ LMA 与所有主流记忆系统（RAG / HNSW / K-Means / RAPTOR / Mem0）的本�
 | 项 | 值 |
 |---|---|
 | dsh 版本 | `0.2.1-rc.2`（源码已适配并跑通） |
-| 插件 version | `0.3.0-rc.1`（npm 发布版，dsh 0.2.1-rc.2，**v2 群-体-词条三层**）；源码已适配 `0.2.1-rc.2` |
+| 插件 version | `0.3.0-rc.3`（npm 发布版，dsh 0.2.1-rc.2，**v2 群-体-词条三层**）；源码已适配 `0.2.1-rc.2` |
 | npm 包 | `@szx-a/dsh-layered-memory-architecture` + `-preset` |
 | peerDependencies | 发布时由 `pnpm publish` 自动替换 `workspace:*` → 对应官方版本 |
 
@@ -468,7 +469,7 @@ LMA 与所有主流记忆系统（RAG / HNSW / K-Means / RAPTOR / Mem0）的本�
 | 版本 | 支持状态 |
 |---|---|
 | dsh `v0.1.1-rc.2` | ✅ npm 发布版（`@szx-a/dsh-layered-memory-architecture@0.1.1-rc.2` + `-preset`） |
-| dsh `v0.2.1-rc.2` | ✅ 源码已适配并跑通（主体已更新验证），npm 发布 `0.3.0-rc.1`（`rc` tag，v2 群层） |
+| dsh `v0.2.1-rc.2` | ✅ 源码已适配并跑通（主体已更新验证），npm 发布 `0.3.0-rc.3`（`rc` tag，v2 群层） |
 
 **`v0.2.0` 适配结论**：官方从 rc.2 到 0.2.0 经历多次重大重构（版本号跳过 0.1.3/0.1.4，又跨 0.1.6/0.1.7 到 0.2.0）。作者已在 worktree 副本（隔离环境）完成适配，并已**将主体更新到 `0.2.0-rc.2` 验证跑通**。0.2.0 相对 0.1.5 不再零改动，共 4 处适配（见下方适配步骤），破坏点与实测结论：
 
