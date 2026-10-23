@@ -11,10 +11,33 @@ export type MountedBodies = () => string[]
 /** GUI 用的体摘要（Remote listBodies 的返回类型）。 */
 export interface BodySummary {
   id: string
+  groupId: string
   name: string
   description: string
   kind: string
 }
+
+/** GUI 用的群摘要（Remote listGroups 的返回类型）。 */
+export interface GroupSummary {
+  id: string
+  name: string
+  description: string
+}
+
+/** 待人工仲裁项（Remote listPendingArbitrations 的返回类型）。 */
+export interface PendingArbitration {
+  id: string
+  concept: string
+  thresholdVerdict: 'near' | 'far'
+  aiVerdict: 'assign' | 'create'
+  nearestGroupId?: string | undefined
+  suggestedGroupName?: string | undefined
+}
+
+/** 人工仲裁决策（Remote resolveArbitration 的入参类型）。 */
+export type ArbitrationDecision =
+  | { kind: 'assign-existing'; groupId: string }
+  | { kind: 'create-new'; groupName?: string | undefined }
 
 /** GUI 用的条目摘要（Remote listEntries 的返回类型）。 */
 export interface EntrySummary {

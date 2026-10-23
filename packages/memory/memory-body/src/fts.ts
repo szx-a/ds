@@ -12,7 +12,7 @@
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
-import { readEntries } from './store.ts'
+import { readEntriesFromDir } from './store.ts'
 
 /** 把用户输入转义为一个 FTS5 phrase——惰性数据，绝不当作 FTS 语法执行。 */
 export function quoteFtsData(query: string): string {
@@ -53,8 +53,8 @@ export class MemoryFts {
   }
 
   /** 全量重建一个体的 FTS 索引（只索引活跃条目：weight>0 且未 superseded）。 */
-  async rebuildBody(root: string, bodyId: string): Promise<void> {
-    const entries = await readEntries(root, bodyId)
+  async rebuildBody(bodyDir: string, bodyId: string): Promise<void> {
+    const entries = await readEntriesFromDir(bodyDir, bodyId)
     const active = entries.filter(e => e.status === 'active' && e.weight > 0)
     const del = this.db.prepare('DELETE FROM entries_fts WHERE body_id = ?')
     const ins = this.db.prepare(

@@ -1,12 +1,14 @@
 /**
  * Cordis-free 权威存储层：记忆体的 JSONL 文件读写。
  *
- * 目录布局（照 agent-presets 的"目录即体" + session-persistence-jsonl 的"JSONL 即权威"）：
+ * 目录布局（"目录即群" + "目录即体" 的层级延续 + "JSONL 即权威"）：
  *
  *   <root>/
- *     <bodyId-encoded>/            # 一个体 = 一个目录，目录名 = 编码后的体 id
- *       body.json                  # 体元数据（name/description/kind/trust）—— 用户可手改
- *       entries.jsonl              # 记忆条目（append-only，一行一条）—— 用户可手改
+ *     <groupId-encoded>/            # 一个群 = 一个目录（归属刚性：体物理存在于群内）
+ *       group.json                  # 群元数据（name/description/anchorRef）—— 用户可手改
+ *       <bodyId-encoded>/           # 一个体 = 群下的一个目录，目录名 = 编码后的体 id
+ *         body.json                 # 体元数据（groupId/name/description/kind/trust）—— 用户可手改
+ *         entries.jsonl             # 记忆条目（append-only，一行一条）—— 用户可手改
  *
  * 设计原则：
  * - 权威层是【可读写的文本文件】，不是 SQLite —— 满足"用户能在后台文件改"。
@@ -54,6 +56,8 @@ export type BodyKind = 'fts' | 'vector' | 'summary'
 /** 一个命名记忆体的元数据（body.json 的内容）。 */
 export interface MemoryBody {
   id: string
+  /** 归属群 id（刚性 ∈ 关系；物理上由体所在群目录决定，此为冗余记录便于查询）。 */
+  groupId: string
   name: string
   description: string
   kind: BodyKind
@@ -73,6 +77,8 @@ export interface MemoryEntry {
   bodyId: string
   authority: EntryAuthority
   content: string
+  /** 词条内容向量（LMA 自持；P2 内存暂存，P3 二进制持久化）。 */
+  embedding?: number[]
   /** 出处：模型总结来自哪个会话、哪条事件（user 条目可省略）。 */
   provenanceSession?: string
   provenanceSeq?: number
@@ -87,28 +93,83 @@ export interface MemoryEntry {
 
 /* ------------------------------------------------------------------ 路径 */
 
-function bodyDir(root: string, bodyId: string): string {
+/** 群 id 的合法形状（与 BODY_ID 同约定）。 */
+export const GROUP_ID = /^[a-z0-9][a-z0-9-]*$/
+
+/** 群目录绝对路径。 */
+export function groupDir(root: string, groupId: string): string {
+  if (!GROUP_ID.test(groupId)) {
+    throw new Error(`invalid memory group id: ${JSON.stringify(groupId)} (must match ${GROUP_ID})`)
+  }
+  return join(root, encodeSegment(groupId))
+}
+
+/** 群下某体的目录绝对路径（归属刚性：体物理存在于群内）。 */
+export function bodyDirInGroup(root: string, groupId: string, bodyId: string): string {
   if (!BODY_ID.test(bodyId)) {
     throw new Error(`invalid memory body id: ${JSON.stringify(bodyId)} (must match ${BODY_ID})`)
   }
-  return join(root, encodeSegment(bodyId))
+  return join(groupDir(root, groupId), encodeSegment(bodyId))
 }
 
-function bodyMetaPath(root: string, bodyId: string): string {
-  return join(bodyDir(root, bodyId), 'body.json')
+/** 列出 root 下所有群目录 id。 */
+export async function listGroupIds(root: string): Promise<string[]> {
+  let children: string[]
+  try {
+    children = await readdir(root)
+  } catch {
+    return []
+  }
+  const ids: string[] = []
+  for (const child of children) {
+    if (GROUP_ID.test(child)) ids.push(child)
+  }
+  return ids.sort()
 }
 
-function entriesPath(root: string, bodyId: string): string {
-  return join(bodyDir(root, bodyId), 'entries.jsonl')
+/**
+ * 定位体所在群目录（目录结构是归属的物理权威：扫描所有群找体）。
+ * 返回 undefined 表示体不存在于任何群。
+ */
+async function findBodyDir(root: string, bodyId: string): Promise<string | undefined> {
+  for (const groupId of await listGroupIds(root)) {
+    const dir = bodyDirInGroup(root, groupId, bodyId)
+    try {
+      await readFile(join(dir, 'body.json'), 'utf8')
+      return dir
+    } catch {
+      // 该群下无此体，继续找下一个群
+    }
+  }
+  return undefined
+}
+
+function bodyMetaPath(dir: string): string {
+  return join(dir, 'body.json')
+}
+
+function entriesPath(dir: string): string {
+  return join(dir, 'entries.jsonl')
 }
 
 /* ------------------------------------------------------------------ 体元数据 */
 
-/** 列出 root 下所有体目录（只认合法 id 的目录）。 */
+/** 列出 root 下所有体目录（遍历所有群下的体）。 */
 export async function listBodyIds(root: string): Promise<string[]> {
+  const ids: string[] = []
+  for (const groupId of await listGroupIds(root)) {
+    for (const child of await listBodyIdsInGroup(root, groupId)) {
+      ids.push(child)
+    }
+  }
+  return ids.sort()
+}
+
+/** 列出某群下的所有体 id。 */
+export async function listBodyIdsInGroup(root: string, groupId: string): Promise<string[]> {
   let children: string[]
   try {
-    children = await readdir(root)
+    children = await readdir(groupDir(root, groupId))
   } catch {
     return []
   }
@@ -121,8 +182,10 @@ export async function listBodyIds(root: string): Promise<string[]> {
 
 /** 读一个体的元数据；不存在返回 undefined。 */
 export async function readBody(root: string, bodyId: string): Promise<MemoryBody | undefined> {
+  const dir = await findBodyDir(root, bodyId)
+  if (dir === undefined) return undefined
   try {
-    const text = await readFile(bodyMetaPath(root, bodyId), 'utf8')
+    const text = await readFile(bodyMetaPath(dir), 'utf8')
     const parsed = JSON.parse(text) as MemoryBody
     if (parsed.id !== bodyId) {
       throw new Error(`body.json id mismatch: expected ${bodyId}, got ${parsed.id}`)
@@ -134,18 +197,24 @@ export async function readBody(root: string, bodyId: string): Promise<MemoryBody
   }
 }
 
-/** 写一个体的元数据（创建或覆盖，用户手改的入口之一）。 */
+/** 写一个体的元数据（创建或覆盖，用户手改的入口之一）。体必须声明 groupId。 */
 export async function writeBody(root: string, body: MemoryBody): Promise<void> {
   if (body.id !== body.id.trim() || !BODY_ID.test(body.id)) {
     throw new Error(`invalid memory body id: ${JSON.stringify(body.id)}`)
   }
-  await mkdir(bodyDir(root, body.id), { recursive: true, mode: 0o700 })
-  await writeFile(bodyMetaPath(root, body.id), JSON.stringify(body, null, 2) + '\n')
+  if (!GROUP_ID.test(body.groupId)) {
+    throw new Error(`invalid memory group id: ${JSON.stringify(body.groupId)} (must match ${GROUP_ID})`)
+  }
+  const dir = bodyDirInGroup(root, body.groupId, body.id)
+  await mkdir(dir, { recursive: true, mode: 0o700 })
+  await writeFile(bodyMetaPath(dir), JSON.stringify(body, null, 2) + '\n')
 }
 
 /** 删除一个体（连同它的 body.json 和 entries.jsonl）。不存在则 no-op。 */
 export async function deleteBody(root: string, bodyId: string): Promise<void> {
-  await rm(bodyDir(root, bodyId), { recursive: true, force: true })
+  const dir = await findBodyDir(root, bodyId)
+  if (dir === undefined) return
+  await rm(dir, { recursive: true, force: true })
 }
 
 /* ------------------------------------------------------------------ 条目 */
@@ -165,8 +234,11 @@ export async function appendEntry(
     createdAt: now,
     updatedAt: now,
   }
-  await mkdir(bodyDir(root, full.bodyId), { recursive: true, mode: 0o700 })
-  await appendFile(entriesPath(root, full.bodyId), JSON.stringify(full) + '\n')
+  const dir = await findBodyDir(root, full.bodyId)
+  if (dir === undefined) {
+    throw new Error(`memory body ${JSON.stringify(full.bodyId)} does not exist; create it before appending entries`)
+  }
+  await appendFile(entriesPath(dir), JSON.stringify(full) + '\n')
   return full
 }
 
@@ -177,9 +249,16 @@ export async function appendEntry(
  * 容忍 torn tail（最后一行没写完就丢弃），但已提交行的 JSON 错误会抛出。
  */
 export async function readEntries(root: string, bodyId: string): Promise<MemoryEntry[]> {
+  const dir = await findBodyDir(root, bodyId)
+  if (dir === undefined) return []
+  return readEntriesFromDir(dir, bodyId)
+}
+
+/** 按体目录读条目（供群级 FTS 用：体目录已由调用方定位，免去再次 findBodyDir 扫描）。 */
+export async function readEntriesFromDir(dir: string, bodyId: string): Promise<MemoryEntry[]> {
   let text: string
   try {
-    text = await readFile(entriesPath(root, bodyId), 'utf8')
+    text = await readFile(entriesPath(dir), 'utf8')
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []
     throw error
@@ -225,7 +304,11 @@ export async function supersedeEntry(
     createdAt: now,
     updatedAt: now,
   }
-  const path = entriesPath(root, oldEntry.bodyId)
+  const dir = await findBodyDir(root, oldEntry.bodyId)
+  if (dir === undefined) {
+    throw new Error(`memory body ${JSON.stringify(oldEntry.bodyId)} does not exist`)
+  }
+  const path = entriesPath(dir)
   await appendFile(path, JSON.stringify(newEntry) + '\n')
   // 追加"推翻记录"行：标记旧条目被谁推翻（append-only，不改写旧行）。
   const marker: MemoryEntry = {
@@ -251,8 +334,63 @@ export async function retireEntry(root: string, oldEntry: MemoryEntry): Promise<
     status: 'superseded',
     updatedAt: now,
   }
-  await appendFile(entriesPath(root, oldEntry.bodyId), JSON.stringify(marker) + '\n')
+  const dir = await findBodyDir(root, oldEntry.bodyId)
+  if (dir === undefined) {
+    throw new Error(`memory body ${JSON.stringify(oldEntry.bodyId)} does not exist`)
+  }
+  await appendFile(entriesPath(dir), JSON.stringify(marker) + '\n')
   return marker
+}
+
+/* ------------------------------------------------------------------ 挂载目标 */
+
+/** 展开后的「要检索的体」（含群信息，用于群级 FTS 隔离）。 */
+export interface MountBody {
+  groupId: string
+  bodyId: string
+}
+
+/**
+ * 把挂载目标路径展开为「要检索的体」列表。
+ *
+ * 挂载语法（P1）：
+ * - 单段 `physics` = 挂载整个群（展开为该群下所有体）。
+ * - 两段 `physics/quantum` = 挂载群里某个体。
+ * - 旧式单段体 id（如 `code`，P0 迁移前遗留）= 归入 general 群（向后兼容）。
+ */
+export async function expandMountTargets(root: string, targets: readonly string[]): Promise<MountBody[]> {
+  const result: MountBody[] = []
+  const groupIds = new Set(await listGroupIds(root))
+  for (const target of targets) {
+    const seg = target.split('/').filter(s => s.length > 0)
+    if (seg.length >= 2) {
+      // 两段：group/body
+      const groupId = seg[0]
+      const bodyId = seg.slice(1).join('/')
+      if (groupId !== undefined) {
+        result.push({ groupId, bodyId })
+      }
+    } else if (seg.length === 1) {
+      const single = seg[0]
+      if (single !== undefined && groupIds.has(single)) {
+        // 单段且是群：展开为群下所有体
+        for (const bodyId of await listBodyIdsInGroup(root, single)) {
+          result.push({ groupId: single, bodyId })
+        }
+      } else if (single !== undefined) {
+        // 单段且不是群：旧式体 id，扫描所有群定位其归属（向后兼容）。
+        for (const groupId of groupIds) {
+          for (const bodyId of await listBodyIdsInGroup(root, groupId)) {
+            if (bodyId === single) {
+              result.push({ groupId, bodyId })
+            }
+          }
+        }
+        // 找不到归属的体：跳过（目标不存在，检索时自然无命中）。
+      }
+    }
+  }
+  return result
 }
 
 /** 解析 root 为绝对路径（供插件在 apply 时调用）。 */

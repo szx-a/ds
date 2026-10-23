@@ -13,7 +13,6 @@ import type { CommandInvocation, CommandResult } from '@deepseek-ai/dsh-commands
 import type { MemoryStore } from './memory-store.ts'
 import { summarizeIntoBody } from './summarize.ts'
 import { parseRemember, parseSummarizeBody } from './parse.ts'
-import { BODY_ID } from './store.ts'
 
 /* ------------------------------------------------------------------ /remember */
 
@@ -93,34 +92,39 @@ async function executeForget(
 
 /* ------------------------------------------------------------------ /mount /unmount */
 
-const MOUNT_USAGE = 'Usage: /mount <体id>'
+const MOUNT_USAGE = 'Usage: /mount <群id> 或 /mount <群id>/<体id>'
 
-/** 把某个体挂到当前会话（只影响当前会话，数据持久、挂载临时）。 */
+/** 挂载目标路径：单段 = 群，两段 = group/body（均小写字母数字 + 连字符）。 */
+const MOUNT_PATH = /^[a-z0-9][a-z0-9-]*(\/[a-z0-9][a-z0-9-]*)?$/
+
+/** 把某个群或体挂到当前会话（只影响当前会话，数据持久、挂载临时）。 */
 async function executeMount(
   store: MemoryStore,
   invocation: CommandInvocation,
 ): Promise<CommandResult> {
   const owner = invocation.agent
   if (owner === undefined) return { kind: 'error', text: '/mount requires an owning agent session.' }
-  const bodyId = invocation.rawInput.trim()
-  if (bodyId.length === 0 || !BODY_ID.test(bodyId)) return { kind: 'error', text: MOUNT_USAGE }
-  const body = await store.readBody(bodyId)
-  if (body === undefined) return { kind: 'error', text: `Memory body ${JSON.stringify(bodyId)} does not exist.` }
-  store.mount(bodyId, owner)
-  return { kind: 'success', text: `Mounted body ${JSON.stringify(bodyId)} for this session.` }
+  const target = invocation.rawInput.trim()
+  if (target.length === 0 || !MOUNT_PATH.test(target)) return { kind: 'error', text: MOUNT_USAGE }
+  if (!await store.mountTargetExists(target)) {
+    return { kind: 'error', text: `Mount target ${JSON.stringify(target)} does not exist (no such group or body).` }
+  }
+  store.mount(target, owner)
+  const kind = target.includes('/') ? 'body' : 'group'
+  return { kind: 'success', text: `Mounted ${kind} ${JSON.stringify(target)} for this session.` }
 }
 
-/** 从当前会话卸下某个体（不删数据，只是本会话不再检索它）。 */
+/** 从当前会话卸下某个群或体（不删数据，只是本会话不再检索它）。 */
 async function executeUnmount(
   store: MemoryStore,
   invocation: CommandInvocation,
 ): Promise<CommandResult> {
   const owner = invocation.agent
   if (owner === undefined) return { kind: 'error', text: '/unmount requires an owning agent session.' }
-  const bodyId = invocation.rawInput.trim()
-  if (bodyId.length === 0 || !BODY_ID.test(bodyId)) return { kind: 'error', text: 'Usage: /unmount <体id>' }
-  store.unmount(bodyId, owner)
-  return { kind: 'success', text: `Unmounted body ${JSON.stringify(bodyId)} for this session.` }
+  const target = invocation.rawInput.trim()
+  if (target.length === 0 || !MOUNT_PATH.test(target)) return { kind: 'error', text: 'Usage: /unmount <群id 或 群id/体id>' }
+  store.unmount(target, owner)
+  return { kind: 'success', text: `Unmounted ${JSON.stringify(target)} for this session.` }
 }
 
 /* ------------------------------------------------------------------ 注册 */
@@ -147,14 +151,14 @@ export function registerCommands(ctx: Context, store: MemoryStore): void {
     })
     yield ctx.commands.register({
       name: 'mount',
-      description: 'Mount a memory body into the current session (visible to memory_search)',
-      input: { hint: '体 id' },
+      description: 'Mount a memory group or body into the current session (visible to memory_search)',
+      input: { hint: '群 id 或 群id/体id' },
       handler: invocation => executeMount(store, invocation),
     })
     yield ctx.commands.register({
       name: 'unmount',
-      description: 'Unmount a memory body from the current session (data kept, just not searched)',
-      input: { hint: '体 id' },
+      description: 'Unmount a memory group or body from the current session (data kept, just not searched)',
+      input: { hint: '群 id 或 群id/体id' },
       handler: invocation => executeUnmount(store, invocation),
     })
   }, 'memory-body commands lifecycle')

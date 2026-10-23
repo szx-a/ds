@@ -13,8 +13,9 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import memoryBodyRemote from '@szx-a/dsh-layered-memory-architecture/remote'
 import type {} from '@szx-a/dsh-layered-memory-architecture/remote'
-import { MemoryBodyTab, type BodyRow, type EntryRow, type MemoryBodyTabInjected } from './MemoryBodyTab.tsx'
+import { MemoryBodyTab, type BodyRow, type EntryRow, type GroupRow, type MemoryBodyTabInjected } from './MemoryBodyTab.tsx'
 import { MountedBodiesLine } from './MountedBodiesLine.tsx'
+import type { ArbitrationRow, ArbitrationDecisionInput } from './ArbitrationPanel.tsx'
 
 export const inject = ['slots', 'remote']
 
@@ -32,8 +33,8 @@ export async function apply(ctx: ClientContext): Promise<void> {
       if (!r.ok) throw new Error(`listBodies failed: ${r.error.code}: ${r.error.message}`)
       return r.value
     },
-    createBody: async (id, name, description, kind) => {
-      const r = await remote.createBody(id, name, description, kind)
+    createBody: async (id, name, description, kind, groupId) => {
+      const r = await remote.createBody(id, name, description, kind, groupId)
       if (!r.ok) throw new Error(`createBody failed: ${r.error.code}: ${r.error.message}`)
       return r.value
     },
@@ -45,6 +46,31 @@ export async function apply(ctx: ClientContext): Promise<void> {
     listEntries: async (bodyId): Promise<EntryRow[]> => {
       const r = await remote.listEntries(bodyId)
       if (!r.ok) throw new Error(`listEntries failed: ${r.error.code}: ${r.error.message}`)
+      return r.value
+    },
+    listGroups: async (): Promise<GroupRow[]> => {
+      const r = await remote.listGroups()
+      if (!r.ok) throw new Error(`listGroups failed: ${r.error.code}: ${r.error.message}`)
+      return r.value
+    },
+    createGroup: async (id, name, description) => {
+      const r = await remote.createGroup(id, name, description)
+      if (!r.ok) throw new Error(`createGroup failed: ${r.error.code}: ${r.error.message}`)
+      return r.value
+    },
+    removeGroup: async (groupId) => {
+      const r = await remote.removeGroup(groupId)
+      if (!r.ok) throw new Error(`removeGroup failed: ${r.error.code}: ${r.error.message}`)
+      return r.value
+    },
+    listPendingArbitrations: async (): Promise<ArbitrationRow[]> => {
+      const r = await remote.listPendingArbitrations()
+      if (!r.ok) throw new Error(`listPendingArbitrations failed: ${r.error.code}: ${r.error.message}`)
+      return r.value
+    },
+    resolveArbitration: async (arbitrationId, decision: ArbitrationDecisionInput) => {
+      const r = await remote.resolveArbitration(arbitrationId, decision)
+      if (!r.ok) throw new Error(`resolveArbitration failed: ${r.error.code}: ${r.error.message}`)
       return r.value
     },
   })

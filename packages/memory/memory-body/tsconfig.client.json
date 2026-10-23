@@ -8,6 +8,7 @@
   "files": [
     "src/client/index.tsx",
     "src/client/MemoryBodyTab.tsx",
+    "src/client/ArbitrationPanel.tsx",
     "src/client/MountedBodiesLine.tsx"
   ],
   "references": [
