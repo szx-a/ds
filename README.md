@@ -211,52 +211,57 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 **先分清三个动作**：
 
 - **建群/建体**（设置页建，或手动建 `group.json` / `body.json`）= 创建，只在磁盘生成，**不等于授权**
-- **挂载**（`/mount`）= 授权，「这个会话能读写这些群/体」
+- **挂载**（`/mount`）= 授权，「这个会话能检索/写入这些群或体」
 - **写入**（`/remember` `/summarize`）= 实际存内容
 
-只有**挂载**的体才能被写。刚建好的体**不会自动挂载**，要先 `/mount <体id>`。所以「在 GUI 里建了体」之后直接 `/remember` 会报 `No memory body mounted` —— 那不是体不存在，是还没挂载。
+只有**挂载**的群/体才能被读写。刚建好的群/体**不会自动挂载**，要先 `/mount`。所以「在 GUI 里建了体」之后直接 `/remember` 会报 `No memory body mounted` —— 那不是体不存在，是还没挂载。
 
 **挂载是累加，可挂多个**（`/unmount` 只删那一个，不影响其他）：
 
 ```
-/mount wd-231567   → [wd-231567]
-/mount code        → [code, wd-231567]        # 后挂的插到最前
-/mount physics     → [physics, code, wd-231567]
+/mount physics         → [physics]                     # 挂整个群：检索范围 = 群下所有体
+/mount physics/quantum → [physics/quantum, physics]    # 挂群里某个体：后挂的插到最前
 ```
 
-**默认写入「最近挂载的体」**（挂载集第一个）：
+> ⚠️ **「挂群」和「挂体」的粒度不同**：
+> - `/mount physics`（单段）挂的是**群**，`memory_search` 会检索群下**所有**体；
+> - `/mount physics/quantum`（两段）挂的是群里**某个体**，只检索这个体。
+>
+> 但**写入必须落到具体的体**（词条属于体，不属于群）。所以建议写入时精确挂体（`/mount 群/体`），或用 `/remember <体id> <内容>` 显式指定体。
+
+**默认写入「最近挂载的体」**（挂载集里第一个**体**）：
 
 - 刚启动、没挂过任何体 → 挂载集 = `defaultBodies`（默认 `[code]`），默认写 `code`
-- `/mount physics` → 把 `physics` 插到最前，默认写 `physics`
+- `/mount physics/quantum` → 把 `physics/quantum` 插到最前，默认写它
 
-**体必须先存在**：默认目标体（或任何你指定的体）若没创建，`/remember` `/summarize` 会报 `Memory body "xxx" does not exist`，**不会自动创建**。
+**群/体必须先存在**：默认目标体（或任何你指定的体）若没创建，`/remember` `/summarize` 会报 `Memory body "xxx" does not exist`，**不会自动创建**。
 
 **显式指定体**（绕过默认，挂多个时才有意义）：
 
 - `/remember <体id> <内容>` → 存到指定体
 - `/summarize <体id>` → 总结到指定体
 
-> ⚠️ 显式指定的体**也必须已挂载**：`/remember x 内容` 里若 `x` 长得像体 id（全小写字母数字/连字符）却未挂载，会**报错** `Memory body "x" is not mounted`，不会静默当文本。所以先 `/mount x` 再点名。
+> ⚠️ 显式指定的体**也必须已挂载**：`/remember x 内容` 里若 `x` 长得像体 id（全小写字母数字/连字符）却未挂载，会**报错** `Memory body "x" is not mounted`，不会静默当文本。所以先 `/mount 群/x` 再点名。
 
 **所有操作的默认目标一览**（命令 + 模型工具都遵循同一规则）：
 
 | 操作 | 权威 | 不指定体时的目标 |
 |---|---|---|
-| `/remember` | user | 最近挂载的体（挂载集第一个） |
+| `/remember` | user | 最近挂载的体（挂载集里第一个体） |
 | `memory_remember`（模型自动） | user | 最近挂载的体 |
 | `/summarize` | model | 最近挂载的体 |
 | 自动总结 | model | 最近挂载的体 |
-| `memory_search`（模型自动） | — | 搜**所有**挂载的体 |
+| `memory_search`（模型自动） | — | 搜**所有**挂载的群/体 |
 
-**核心规则一句话**：所有写入（命令和模型工具）默认写到「**最近挂载的体**」——因为 `/mount` 会把体插到挂载集最前。想写别的体就显式指定体 id。
+**核心规则一句话**：所有写入（命令和模型工具）默认写到「**最近挂载的体**」——因为 `/mount` 会把目标插到挂载集最前。想写别的体就显式指定体 id；想扩大检索范围就挂群。
 
-**举例**（挂 `physics` 和 `code` 两个）：
+**举例**（挂 `physics/quantum` 和 `code` 两个体）：
 
 | 操作 | 挂载集 | `/remember 内容` 存到 | `/remember code 内容` 存到 |
 |---|---|---|---|
 | （无操作） | `[code]` | `code` | `code` |
-| `/mount physics` | `[physics, code]` | `physics` | `code` |
-| `/mount physics` 后 `/unmount code` | `[physics]` | `physics` | ❌ 报错 `code` 未挂载 |
+| `/mount physics/quantum` | `[physics/quantum, code]` | `physics/quantum` | `code` |
+| `/mount physics/quantum` 后 `/unmount code` | `[physics/quantum]` | `physics/quantum` | ❌ 报错 `code` 未挂载 |
 
 ### 模型工具（自动调用，无需手动）
 

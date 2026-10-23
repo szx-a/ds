@@ -132,6 +132,21 @@ export async function listGroupIds(root: string): Promise<string[]> {
  * 返回 undefined 表示体不存在于任何群。
  */
 async function findBodyDir(root: string, bodyId: string): Promise<string | undefined> {
+  // 「群/体」路径（带斜杠）：直接定位该群下的体，免扫描。
+  const slash = bodyId.indexOf('/')
+  if (slash >= 0) {
+    const groupId = bodyId.slice(0, slash)
+    const bId = bodyId.slice(slash + 1)
+    if (groupId === '' || bId === '') return undefined
+    const dir = bodyDirInGroup(root, groupId, bId)
+    try {
+      await readFile(join(dir, 'body.json'), 'utf8')
+      return dir
+    } catch {
+      return undefined
+    }
+  }
+  // 纯体 id：扫描所有群定位。
   for (const groupId of await listGroupIds(root)) {
     const dir = bodyDirInGroup(root, groupId, bodyId)
     try {
