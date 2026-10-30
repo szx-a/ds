@@ -1,7 +1,7 @@
 {
   "name": "@szx-a/dsh-layered-memory-architecture",
   "description": "记忆体（Memory Body）：命名、跨会话、隔离、可挂载的记忆单元",
-  "version": "0.3.0-rc.3",
+  "version": "0.3.0-rc.4",
   "publishConfig": {
     "access": "public"
   },

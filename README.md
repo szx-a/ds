@@ -58,7 +58,7 @@ LMA 的两个包都声明了 `dsh.bundle.patch`（指向包内 `cordis.patch.yml
 
 ### 前置：版本对齐（重要）
 
-源码已适配 dsh `0.2.1-rc.2`（含挂载标签实时刷新）。npm 发布版：`latest` = `0.1.1-rc.2`（dsh rc.2），`rc` = `0.3.0-rc.3`（dsh 0.2.1-rc.2，**v2 群-体-词条三层架构**）。
+源码已适配 dsh `0.2.1-rc.2`（含挂载标签实时刷新）。npm 发布版：`latest` = `0.1.1-rc.2`（dsh rc.2），`rc` = `0.3.0-rc.4`（dsh 0.2.1-rc.2，**v2 群-体-词条三层架构**）。
 
 ### 方式一：手动接入（当前可用的方式）
 
@@ -142,15 +142,15 @@ corepack pnpm run build:official # = tsx scripts/build.ts --profile official（9
 
 npm 已发布两个包，**基于 dsh `0.2.1-rc.2`**（`rc` tag），适合 web 端**不想放源码、不想自己构建**的情况（npm 包已含编译好的 `lib/` 产物和类型声明）。
 
-- `@szx-a/dsh-layered-memory-architecture@0.3.0-rc.3`
-- `@szx-a/dsh-layered-memory-architecture-preset@0.3.0-rc.3`
+- `@szx-a/dsh-layered-memory-architecture@0.3.0-rc.4`
+- `@szx-a/dsh-layered-memory-architecture-preset@0.3.0-rc.4`
 
-> ⚠️ `latest` tag 仍是 `0.1.1-rc.2`（dsh rc.2 旧版）。装 0.3.0 版需显式写 `@0.3.0-rc.3` 或 `@rc`。
+> ⚠️ `latest` tag 仍是 `0.1.1-rc.2`（dsh rc.2 旧版）。装 0.3.0 版需显式写 `@0.3.0-rc.4` 或 `@rc`。
 
 **1. 安装两个包**（装到 web-app bundle）：
 
 ```bash
-pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architecture@0.3.0-rc.3 @szx-a/dsh-layered-memory-architecture-preset@0.3.0-rc.3
+pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architecture@0.3.0-rc.4 @szx-a/dsh-layered-memory-architecture-preset@0.3.0-rc.4
 ```
 
 **2. 改 `packages/bundle/web-app/cordis.patch.yml`**（同方式一第 2 步）：加 `memory-store` + `memory-body` 两个 row。
@@ -170,8 +170,8 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 **1. 打开插件管理器**（桌面端 GUI 或对话里调用），安装两个包：
 
 ```
-@szx-a/dsh-layered-memory-architecture@0.3.0-rc.3
-@szx-a/dsh-layered-memory-architecture-preset@0.3.0-rc.3
+@szx-a/dsh-layered-memory-architecture@0.3.0-rc.4
+@szx-a/dsh-layered-memory-architecture-preset@0.3.0-rc.4
 ```
 
 （等价于 `plugin_manager install_bundle <包名>`）
@@ -419,7 +419,7 @@ LMA 与所有主流记忆系统（RAG / HNSW / K-Means / RAPTOR / Mem0）的本�
 8. 官方版本号跳到 `v0.1.5-rc.2`（跳过 0.1.3/0.1.4），主体已更新到 0.1.5-rc.2 并跑通（9 处适配全程零改动）
 9. 官方跨 0.1.6/0.1.7 到 `v0.2.0-rc.2`，主体已更新到 0.2.0-rc.2 并跑通（0.2.0 有 4 处适配：preset 声明方式重构、summarize kind 类型、tsconfig 子项目路径、micromark override）
 10. 官方出 `v0.2.1-rc.2`，主体已更新到 0.2.1-rc.2 并跑通（0.2.1 仅 1 处适配：tsdown.config.ts 的 clientBundle 参数改 import.meta.dirname；构建方式改为 build:official 统一编排）；npm 发布 `0.2.1-rc.1`
-11. LMA 正式架构升级到 **v2 群-体-词条三层**（自顶向下公理切割：族⊃簇⊃向量、公理锚、树状多族路由、群级物理隔离、AI 自动建群 + 阈值/语义双重判定 + 人工仲裁面板）；npm 发布 `0.3.0-rc.3`
+11. LMA 正式架构升级到 **v2 群-体-词条三层**（自顶向下公理切割：族⊃簇⊃向量、公理锚、树状多族路由、群级物理隔离、AI 自动建群 + 阈值/语义双重判定 + 人工仲裁面板）；npm 发布 `0.3.0-rc.4`
 
 ### 关键踩坑（已固化到 `RECOVERY.md`）
 
@@ -460,7 +460,7 @@ LMA 与所有主流记忆系统（RAG / HNSW / K-Means / RAPTOR / Mem0）的本�
 | 项 | 值 |
 |---|---|
 | dsh 版本 | `0.2.1-rc.2`（源码已适配并跑通） |
-| 插件 version | `0.3.0-rc.3`（npm 发布版，dsh 0.2.1-rc.2，**v2 群-体-词条三层**）；源码已适配 `0.2.1-rc.2` |
+| 插件 version | `0.3.0-rc.4`（npm 发布版，dsh 0.2.1-rc.2，**v2 群-体-词条三层**）；源码已适配 `0.2.1-rc.2` |
 | npm 包 | `@szx-a/dsh-layered-memory-architecture` + `-preset` |
 | peerDependencies | 发布时由 `pnpm publish` 自动替换 `workspace:*` → 对应官方版本 |
 
@@ -469,7 +469,7 @@ LMA 与所有主流记忆系统（RAG / HNSW / K-Means / RAPTOR / Mem0）的本�
 | 版本 | 支持状态 |
 |---|---|
 | dsh `v0.1.1-rc.2` | ✅ npm 发布版（`@szx-a/dsh-layered-memory-architecture@0.1.1-rc.2` + `-preset`） |
-| dsh `v0.2.1-rc.2` | ✅ 源码已适配并跑通（主体已更新验证），npm 发布 `0.3.0-rc.3`（`rc` tag，v2 群层） |
+| dsh `v0.2.1-rc.2` | ✅ 源码已适配并跑通（主体已更新验证），npm 发布 `0.3.0-rc.4`（`rc` tag，v2 群层） |
 
 **`v0.2.0` 适配结论**：官方从 rc.2 到 0.2.0 经历多次重大重构（版本号跳过 0.1.3/0.1.4，又跨 0.1.6/0.1.7 到 0.2.0）。作者已在 worktree 副本（隔离环境）完成适配，并已**将主体更新到 `0.2.0-rc.2` 验证跑通**。0.2.0 相对 0.1.5 不再零改动，共 4 处适配（见下方适配步骤），破坏点与实测结论：
 
