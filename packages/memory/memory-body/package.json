@@ -1,7 +1,7 @@
 {
   "name": "@szx-a/dsh-layered-memory-architecture",
   "description": "记忆体（Memory Body）：命名、跨会话、隔离、可挂载的记忆单元",
-  "version": "0.3.0-rc.4",
+  "version": "0.4.0-rc.1",
   "publishConfig": {
     "access": "public"
   },
@@ -74,6 +74,7 @@
     "lib/typert.host.d.ts",
     "lib/typert.remote-client.js",
     "lib/typert.remote-client.d.ts",
+    "lib/typert.remote-client.d.ts.map",
     "lib/client.js",
     "lib/client.js.map",
     "cordis.patch.yml"
