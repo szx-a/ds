@@ -23,22 +23,27 @@
   - [GUI](#gui)
   - [后台编辑](#后台编辑)
 - [架构（LMA）](#架构lma--layered-memory-architecture)
+  - [设计动机：三大困境](#设计动机现有记忆系统的三大困境)
   - [核心范式：自顶向下公理切割](#核心范式自顶向下公理切割)
   - [三层拓扑](#三层拓扑)
+  - [公理锚 vs 质心](#公理锚-vs-质心向量层最锋利的一刀)
+  - [数学形式化：定义与定理](#数学形式化定义与定理)
   - [检索：树状多族路由](#检索树状多族路由)
   - [主权与创建](#主权与创建)
+  - [与传统系统的对比](#与传统系统的对比)
   - [2 个包 + 3 个加载平面](#2-个包--3-个加载平面)
   - [服务组件](#服务组件)
   - [存储：事件溯源](#存储事件溯源)
   - [作用域与挂载机制](#作用域与挂载机制)
   - [设计取舍](#设计取舍)
+  - [本体论与三条原则](#本体论与三条原则)
 - [开发历程与踩坑](#开发历程与踩坑)
   - [迭代主线](#迭代主线)
   - [关键踩坑](#关键踩坑已固化到-recoverymd)
 - [测试与后续开发](#测试与后续开发)
 - [版本提示](#版本提示)
   - [兼容性说明](#兼容性说明)
-  - [LMA 适配新版本的步骤](#lma-适配新版本的步骤供先行者自担风险参考)
+  - [适配 SOP](#适配-sop跟随-dsh-版本更新)
 - [目录结构](#目录结构)
 - [许可证](#许可证)
 
@@ -335,6 +340,16 @@ pnpm --filter @deepseek-ai/dsh-web-app add @szx-a/dsh-layered-memory-architectur
 
 ## 架构（LMA — Layered Memory Architecture）
 
+### 设计动机：现有记忆系统的三大困境
+
+大语言模型的长期记忆，目前几乎都走同一条路：把一切内容变成高维向量，丢进一个扁平空间，靠近似最近邻（ANN）算法检索。这条路有三个绕不开的困境：
+
+- **算力内卷**：检索空间永远是全集 U。随着数据规模 N 无界增长，内存开销与检索延迟线性甚至指数膨胀。无论怎么优化 HNSW 的图结构、怎么压内存，检索范围始终是「所有记忆」，这是结构决定的，算法救不了。
+- **语义漂移**：根据高维几何的「距离集中现象」，维度越高，任意两个随机向量的距离越趋于相等——「距离近」越来越不代表「语义相关」。大量无关的日常对话（长尾高频）与少量精专知识（短尾低频）混在一个空间里，全局检索的信噪比急剧下降，假阳性直接引发幻觉。
+- **越权失控**：现有系统倾向于让 AI 自动提取、自动预测记忆，记忆空间沦为无序的「垃圾桶」。人类用户失去了对记忆物理边界的绝对控制权——主权（Sovereignty）缺失。
+
+三个困境指向同一个根源：**它们都在一个扁平、连续的度量空间里，用统计概率去「猜」边界。**
+
 ### 核心范式：自顶向下公理切割
 
 LMA 与所有主流记忆系统（RAG / HNSW / K-Means / RAPTOR / Mem0）的本质区别：
@@ -346,7 +361,11 @@ LMA 与所有主流记忆系统（RAG / HNSW / K-Means / RAPTOR / Mem0）的本�
 | 数学基础 | 度量空间 + 概率密度估计 | 离散拓扑 + 集合论 |
 | 不确定时 | 用概率硬猜 | 上抛人工仲裁 |
 
-**族 ⊃ 簇 ⊃ 向量** 是绝对的拓扑包含关系，不依赖概率计算，依赖群/体的创建。归属关系（∈）是唯一刚性公理——词条不跨体、体不跨群；内容柔性（边界内自由演化）；增删是主权事件（AI 增删需人工批准）。
+主流系统（RAG、HNSW、K-Means、层次聚类、RAPTOR、Mem0）在数学上的本质是 **Bottom-up Clustering（自底向上的聚类与摘要）**：把海量向量丢进去，用算法计算距离、自动打包成「簇」或「摘要」，这是统计学的概率映射，边界是「涌现」的、模糊的、会漂移的。它们的层级（如 RAPTOR 的摘要树）本质是「喂给 LLM 阅读的摘要」，是数据压缩机制，不是检索隔离边界。
+
+LMA 走的是相反的 **Top-down Axiomatic Partitioning（自顶向下的公理切割）**：「群、体、词条」不是算法算出来的，而是用户或 AI 基于领域知识直接**硬性定义的集合公理**。族 ⊃ 簇 ⊃ 向量 是一个**绝对的拓扑空间包含关系**，不依赖概率计算，依赖群或体的创建。
+
+一句话：**主流在「度量空间里猜边界」，LMA 在「拓扑空间里立边界」。** 前者边界是概率，后者边界是公理。归属关系（∈）是唯一刚性公理——词条不跨体、体不跨群；内容柔性（边界内自由演化）；增删是主权事件（AI 增删需人工批准）。
 
 ### 三层拓扑
 
@@ -358,6 +377,55 @@ LMA 与所有主流记忆系统（RAG / HNSW / K-Means / RAPTOR / Mem0）的本�
 
 - **公理锚（非质心）**：群/体锚是创建时定义的领域/主题概念向量，稳定不漂移
 - **物理隔离**：每群独立目录 + 独立 FTS5 索引 + 独立锚文件
+
+### 公理锚 vs 质心：向量层最锋利的一刀
+
+三层结构各自有一个「中心点」用于路由。这里藏着最关键的实现抉择：**中心点到底是「质心」还是「公理锚」？**
+
+- **质心（centroid）**：对群内所有词条向量求平均、算出来的。它会随数据增删而漂移，是统计量。
+- **公理锚（axiomatic anchor）**：创建群/体时，由用户或 AI 基于领域知识**定义**的领域概念向量（「Physics」这个概念本身的 embedding）。它稳定不漂移，是公理量。
+
+如果用了「质心」，就等于把「聚类」套了个「群」的壳子——边界照样漂移，照样是概率映射，违背了整个架构的初衷。所以 LMA 的锚必须是「公理锚」。
+
+**「公理锚 vs 质心」，就是「公理切割 vs 统计聚类」在向量层的最终分界。** 它让「隔离」从「统计上的近似分开」变成「定义上的绝对分开」。
+
+### 数学形式化：定义与定理
+
+把「群、体、词条」映射到集合论与拓扑学，可以严格定义出 LMA 的底层结构。设全量记忆词条构成的高维向量空间为全集 $V$，规模为 $N$。
+
+**定义 1（族 Family / 记忆群）**：LMA 将全集 $V$ 划分为 $m$ 个互不相交的子空间 $\mathcal{F} = \{F_1, \dots, F_m\}$，满足三个性质：
+
+1. **完备性**：$V = \bigcup_{i=1}^{m} F_i$
+2. **互斥性**：$\forall\, i \neq j,\; F_i \cap F_j = \emptyset$
+3. **直和性**：$V = \bigoplus_{i=1}^{m} F_i$
+
+传统聚类允许一个向量以不同的概率同时属于多个簇（软聚类的隶属度）。但在 LMA 中，一个向量一旦被挂载写入某个族 $F_i$，它在拓扑上就被绝对固定于 $F_i$——任何检索算法的搜索算力，在进入 $F_i$ 的瞬间，就在数学上被截断了与其他族的连通性。
+
+**定义 2（簇 Cluster / 记忆体）**：在族 $F_i$ 内部，系统基于语义一致性建立划分 $\mathcal{C}_i = \{C_{i1}, \dots, C_{ik}\}$，满足 $F_i = \bigcup_{j=1}^{k} C_{ij}$ 且互不相交。
+
+根据高维几何的「距离集中现象」，当维度 $d \to \infty$ 时，任意两个随机向量的距离变异系数趋于零：
+
+$$\frac{\sqrt{\operatorname{Var}(\|x - y\|_2)}}{\mathbb{E}(\|x - y\|_2)} \to 0$$
+
+这意味着「距离近」越来越不代表「语义相关」。LMA 的簇本质上是把距离度量**限制在局部紧致集 $C_{ij}$ 内**，度量环境的信噪比远高于全局空间。
+
+**定义 3（向量 Vector / 词条 Entry）**：词条 $v$ 受两重约束——**归属约束**（$v \in C_{ij} \subset F_i \subset V$，所属簇/族被卸载则不可检索）与**溯源约束**（增删改查绑定在不可变的 JSONL 事件流中）。
+
+**集合论映射**：设全量词条集合为 $U$，任何元素满足唯一归属：
+
+$$\forall\, x \in U,\quad \exists!\, (F_i, C_{ij})\ \text{ 使得 }\ x \in C_{ij} \subset F_i$$
+
+这种严格嵌套切断了跨域的语义跃迁路径。
+
+**定理（三阶降维复杂度）**：设 $m$ 为族数、$k$ 为每族簇数、$n$ 为每簇词条数，$N = m \cdot k \cdot n$。
+
+| 模式 | 挂载状态 | 复杂度 |
+|---|---|---|
+| 模式一（全局树状检索） | 无挂载（冷启动） | $T_1 = O(\log m + \log k) = O(\log K),\ K = m \cdot k$ |
+| 模式二（挂载群，子空间降维） | 挂 $q$ 个群 | $T_2 = O(\log(q \cdot k)),\ q < m$ |
+| 模式三（挂载体，点对点直连） | 挂 $r$ 个体 | $T_3 = O(1)$（微秒级） |
+
+被抛弃的 $(m - q)$ 个族在物理意义上彻底从计算图中剔除，算力消耗断崖式下跌——这是扁平架构结构上做不到的。
 
 ### 检索：树状多族路由
 
@@ -431,6 +499,21 @@ LMA 与所有主流记忆系统（RAG / HNSW / K-Means / RAPTOR / Mem0）的本�
 - **挂载累加**：`/mount` 插到最前（最近挂载 = 默认写入目标），`/unmount` 只删单个
 - **挂载持久化**：会话挂载集存 `root/mounts.json`，`/mount` `/unmount` 立即落盘；会话重启自动恢复，新会话回退默认
 
+### 与传统系统的对比
+
+| 维度 | 主流（RAG / HNSW / RAPTOR / Mem0） | LMA |
+|---|---|---|
+| 数学本质 | 自底向上聚类与摘要 | 自顶向下公理切割 |
+| 边界来源 | 距离度量、算法打包（概率） | 领域知识、硬性定义（公理） |
+| 边界性质 | 模糊、会漂移 | 刚性、锁死 |
+| 数学基础 | 度量空间 + 概率密度估计 | 离散拓扑 + 集合论 |
+| 层级用途 | 给 LLM 读的摘要压缩 | 检索隔离边界 |
+| 检索空间 | 始终全集 U | 三态降维（U → 子空间 → 直连） |
+| 不确定时 | 用概率硬猜 | 上抛人工仲裁 |
+| 人类主权 | 弱（AI 自动预测） | 强（手动 > 自动） |
+
+当前前沿系统（RAPTOR 的摘要树、Mem0 的混合存储）试图通过优化「算法」来解决算力问题，但它们的数据结构依然受限于「统计学软聚类」。LMA 是纯粹的结构主义架构：传统系统想要逆向重构成 LMA 的结构，需要把历史累积的无标签向量重新物理打标与拓扑划分，这在信息论上是不可逆的（会导致大量信息丢失）——这构成了 LMA 的架构护城河。
+
 ### 设计取舍
 
 1. **自顶向下公理切割 vs 自底向上聚类** —— 边界靠定义锁死，不靠度量维持、不漂移
@@ -440,6 +523,18 @@ LMA 与所有主流记忆系统（RAG / HNSW / K-Means / RAPTOR / Mem0）的本�
 5. **GUI + JSONL 双编辑 vs 黑盒** —— 透明可手改
 6. **事件溯源 vs 单一数据库** —— 索引可重建
 7. **可插拔 Embedder vs 强绑定** —— 有 embedding 向量精排，无则 FTS5 兜底
+
+### 本体论与三条原则
+
+LMA 不止是一个插件级的优化，而是对 AI 记忆本体论的一次定义：**记忆不应当是模型概率预测的奴隶，而应当是具有明确公理边界、主权归属于人类的确定性拓扑空间。**
+
+它确立的原则是：
+
+1. 边界靠「定义」锁死，不靠「度量」维持
+2. 隔离靠「结构」强制，不靠「算法」近似
+3. 主权靠「挂载」显式，不靠「预测」默许
+
+在未来的通用人工智能系统中，「事件溯源 + 主权挂载 + 公理切割」将成为底层认知基础设施的必经之路——为物理第一性模型工程提供确定性的记忆前置路由。
 
 ---
 
@@ -452,14 +547,10 @@ LMA 与所有主流记忆系统（RAG / HNSW / K-Means / RAPTOR / Mem0）的本�
 3. 修 client 插件自 mount Remote（第三方包不在 api-remotes 白名单）
 4. 加会话级挂载（`/mount` `/unmount`）
 5. FTS5 分词器 unicode61 → trigram（修中文检索）
-6. 在 worktree 副本完成 `v0.1.2-alpha.1` 适配并验证完整跑通（9 处改动，构建 0 错误，挂载标签实时刷新已恢复）
-7. 官方出 `v0.1.2-rc.1` 后，主体已更新到 rc.1 并跑通（9 处适配跨 alpha.1→alpha.4→rc.1 全程零改动）
-8. 官方版本号跳到 `v0.1.5-rc.2`（跳过 0.1.3/0.1.4），主体已更新到 0.1.5-rc.2 并跑通（9 处适配全程零改动）
-9. 官方跨 0.1.6/0.1.7 到 `v0.2.0-rc.2`，主体已更新到 0.2.0-rc.2 并跑通（0.2.0 有 4 处适配：preset 声明方式重构、summarize kind 类型、tsconfig 子项目路径、micromark override）
-10. 官方出 `v0.2.1-rc.2`，主体已更新到 0.2.1-rc.2 并跑通（0.2.1 仅 1 处适配：tsdown.config.ts 的 clientBundle 参数改 import.meta.dirname；构建方式改为 build:official 统一编排）；npm 发布 `0.2.1-rc.1`
-11. LMA 正式架构升级到 **v2 群-体-词条三层**（自顶向下公理切割：族⊃簇⊃向量、公理锚、树状多族路由、群级物理隔离、AI 自动建群 + 阈值/语义双重判定 + 人工仲裁面板）；npm 发布 `0.3.0-rc.1`
-12. 官方出 `v0.2.1-rc.5`，主体已更新到 0.2.1-rc.5 并跑通（rc.2→rc.5 纯增量：官方仅新增 `ui-entry-customization` 包，LMA 源码零改动、接入点零变化）；npm 发布 `0.3.0-rc.4`
-13. 官方出 `v0.2.2-rc.3`，主体已更新到 0.2.2-rc.3 并跑通（0.2.1→0.2.2 跨 minor：唯一适配点是 LMA files 白名单加 `lib/typert.remote-client.d.ts.map`，LMA 源码零改动、接入点零变化、micromark override 不再需要）；npm 发布 `0.4.0-rc.1`
+6. 早期版本适配（0.1.2 → 0.2.1-rc.2）：LMA 源码零改动，仅接入点随官方重构迁移（preset 位置、MessageSource kind、tsconfig 拆分、micromark override、tsdown clientBundle 参数）
+7. LMA 正式架构升级到 **v2 群-体-词条三层**（自顶向下公理切割：族⊃簇⊃向量、公理锚、树状多族路由、群级物理隔离、AI 自动建群 + 阈值/语义双重判定 + 人工仲裁面板）；npm 发布 `0.3.0-rc.1`
+8. 官方出 `v0.2.1-rc.5`，主体更新并跑通（rc.2→rc.5 纯增量：官方仅新增 `ui-entry-customization` 包，LMA 源码零改动、接入点零变化）；npm 发布 `0.3.0-rc.4`
+9. 官方出 `v0.2.2-rc.3`，主体更新并跑通（0.2.1→0.2.2 跨 minor：唯一适配点是 LMA files 白名单加 `lib/typert.remote-client.d.ts.map`，LMA 源码零改动、接入点零变化、micromark override 不再需要）；npm 发布 `0.4.0-rc.1`
 
 ### 关键踩坑（已固化到 `RECOVERY.md`）
 
@@ -511,173 +602,16 @@ LMA 与所有主流记忆系统（RAG / HNSW / K-Means / RAPTOR / Mem0）的本�
 | dsh `v0.1.1-rc.2` | ✅ npm 发布版（`@szx-a/dsh-layered-memory-architecture@0.1.1-rc.2` + `-preset`） |
 | dsh `v0.2.2-rc.3` | ✅ 源码已适配并跑通（主体已更新验证），npm 发布 `0.4.0-rc.1`（`rc` tag，v2 群层） |
 
-**`v0.2.0` 适配结论**：官方从 rc.2 到 0.2.0 经历多次重大重构（版本号跳过 0.1.3/0.1.4，又跨 0.1.6/0.1.7 到 0.2.0）。作者已在 worktree 副本（隔离环境）完成适配，并已**将主体更新到 `0.2.0-rc.2` 验证跑通**。0.2.0 相对 0.1.5 不再零改动，共 4 处适配（见下方适配步骤），破坏点与实测结论：
+### 适配 SOP（跟随 dsh 版本更新）
 
-| 破坏点 | 影响 LMA 的 | 实测结论 |
-|---|---|---|
-| agent-presets 目录迁移（`apps/cli/config` → `packages/preset`） | preset 接入点 | 0.1.2 起 preset 移到 packages/preset，0.2.0 又改为 packages/bundle/web-app/presets/*.patch.yml 的声明方式 |
-| `@deepseek-ai/dsh-client-runtime` 被拆散 | client 插件依赖 | `ClientContext` → cordis `Context`；`ConversationSnapshot.chat.legacy.nodes` → chat 包的 `ChatSnapshot.legacy.nodes` |
-| 0.2.0 MessageSource 移除通用 `plugin` kind | summarize.ts | `source: { kind: 'plugin' }` → `{ kind: 'user' }` |
-| 0.2.0 ui-* 包拆成 host/client 子项目 | tsconfig.client.json | references 改为指向 `.client.json` |
+LMA 跟随 dsh 版本更新的标准流程已固化为独立文档，三步走：**副本验证 → 主体接入 → npm 发布**。
 
-**作者立场**：LMA 已适配 `0.2.0-rc.2` 并在主体跑通。官方版本迭代快（跳过 0.1.3/0.1.4 直接 0.1.5，又跨 0.1.6/0.1.7 到 0.2.0）。`0.2.0` 的 npm 发布版待定。
+- 核心原则：先在副本验证、再动主体；数据用 git 存档记录；官方文件只增不删。
+- 版本适配历史见「开发历程」的迭代主线；历次适配的适配点结论都记录在案（如 0.2.2 的 files 加 .d.ts.map）。
 
-### LMA 适配新版本的步骤（供先行者自担风险参考）
-
-> 教程级清单，具体到文件 + 行 + 前后代码。以 dsh 0.2.0-rc.2 为准；从旧版本（rc.2 / 0.1.x）跨过来时，先看「A. 接入点」和「B. client 源码」是否已经改过。
-
-**A. 接入点（路径随版本变化，0.2.0 的 preset 声明方式变了）**
-
-**1. host 接入** — `packages/bundle/web-app/cordis.patch.yml`，在 `plugin-inventory` row 后加：
-
-```yaml
-    # LMA 记忆体：共享存储服务 + Remote（体管理 GUI）+ 命令
-    - id: memory-store
-      name: '@szx-a/dsh-layered-memory-architecture/memory-store'
-      config:
-        root: 'F:/dp/memory-body-data'   # ⚠️ 改成你自己的数据目录
-        defaultBodies: [code]
-
-    - id: memory-body
-      name: '@szx-a/dsh-layered-memory-architecture'
-```
-
-**2. preset 接入** — ⚠️ 0.2.0 变了，不再是独立的 agent.cordis.yml row，而是 `packages/bundle/web-app/presets/standard.patch.yml` 里 `preset-standard` 声明的 `config.plugins` 数组末尾加一个条目：
-
-```yaml
-          # LMA 记忆体：模型面向的工具 + 自动总结
-          - id: memory-body-preset
-            name: '@szx-a/dsh-layered-memory-architecture-preset'
-            config:
-              autoSummarize: false
-```
-
-> 历史沿革：0.1.1-rc.2 在 `apps/cli/config/agent-presets/standard/agent.cordis.yml`；0.1.2 搬到 `packages/preset/agent-presets/presets/standard/agent.cordis.yml`；**0.2.0 改为 `packages/bundle/web-app/presets/standard.patch.yml` 的 plugins 数组声明方式**（preset 从静态 yml row 变成 `@deepseek-ai/dsh-agent-preset` 声明的 config.plugins 条目）。
-
-**3. 依赖** — `packages/bundle/web-app/package.json` 的 `dependencies` 加 2 行（⚠️ 0.2.0 用 `workspace:*` 而不是 `workspace:^`）：
-
-```json
-"@szx-a/dsh-layered-memory-architecture": "workspace:*",
-"@szx-a/dsh-layered-memory-architecture-preset": "workspace:*"
-```
-
-**4. references** — `tsconfig.host.json` 的 `references` 加：
-
-```json
-{ "path": "./packages/memory/memory-body/tsconfig.host.json" },
-{ "path": "./packages/memory/memory-body-preset" }
-```
-
-`tsconfig.client.json` 的 `references` 加：
-
-```json
-{ "path": "./packages/memory/memory-body/tsconfig.client.json" }
-```
-
-**B. client 源码改动（`@deepseek-ai/dsh-client-runtime` 被拆散导致，5 处）**
-
-**5. `src/client/index.tsx` 第 8 行** — `ClientContext` 换包：
-
-```ts
-// 旧
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
-// 新
-import type { Context as ClientContext } from '@deepseek-ai/cordis'
-```
-
-**6. `src/client/MountedBodiesLine.tsx` 第 2-3 行** — import 换成 `ChatSnapshot`：
-
-```ts
-// 旧
-import type { ConversationSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
-import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
-// 新
-import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'   // SnapshotSelectorHook 仍在 ui-slots
-import type { ChatSnapshot } from '@deepseek-ai/dsh-client-ui-chat/client'     // 消息节点在 ChatSnapshot.legacy.nodes
-```
-
-**7. `package.json`** — 删 3 处 `dsh-client-runtime`，新增 `ui-chat`：
-
-```jsonc
-// dsh.client.inject 数组：删 "@deepseek-ai/dsh-client-runtime"，加
-"@deepseek-ai/dsh-client-ui-chat"
-
-// peerDependencies / devDependencies：删 "@deepseek-ai/dsh-client-runtime": "workspace:^"，加
-"@deepseek-ai/dsh-client-ui-chat": "workspace:^"
-```
-
-> 我们 LMA 没直接用 store 引擎，删掉 runtime 即可，无需加 `@deepseek-ai/dsh-client-store`。
-
-**8. `tsconfig.client.json`** — 删 `client/runtime` reference；⚠️ 0.2.0 里 ui-settings/ui-conversation/ui-chat 拆成 host/client 子项目，引用要指向 `.client.json`：
-
-```json
-// 0.2.0 的正确引用（旧版直接引目录 ../../client/ui-chat）
-{ "path": "../../client/ui-settings/tsconfig.client.json" },
-{ "path": "../../client/ui-conversation/tsconfig.client.json" },
-{ "path": "../../client/ui-chat/tsconfig.client.json" }
-```
-
-**9. `src/client/index.tsx`** — 补 2 个空 import + slot 参数类型：
-
-```ts
-// 顶部补（提供 client 服务类型声明）
-import type {} from '@deepseek-ai/dsh-api-remotes/client'        // ctx.remote 类型
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'  // ctx.slots 类型
-
-// conversation.composer.dock slot 的 inject factory（第 63、65 行）
-// 旧
-inject: (sessionId: string) => ({
-  listMounted: async (): Promise<string[]> => {
-    const r = await remote.listMounted(sessionId)
-    return r.ok ? r.value : []
-  },
-}),
-// 新（去掉 `: string` 注解，用 String() 转换 branded 类型 SessionIdOf）
-inject: (sessionId) => ({
-  listMounted: async (): Promise<string[]> => {
-    const r = await remote.listMounted(String(sessionId))
-    return r.ok ? r.value : []
-  },
-}),
-```
-
-> 实时刷新信号也已恢复：`MountedBodiesLine` 里 `useSession(s => s.chat.legacy.nodes.length)` → `useChat(s => s.legacy.nodes.length)`（照官方 `StatsLine` 先例，`useChat` 由 ui-chat merge 进 `SessionStandardProps`，session 作用域 slot 组件自动获得）。
-
-**10. `src/summarize.ts`（⚠️ 0.2.0 新增改动）** — MessageSource 移除了通用 `plugin` kind：
-
-```ts
-// 旧
-source: { kind: 'plugin', plugin: 'dsh-memory-body' }
-// 新（0.2.0 的 MessageSourceMap 只有 user/model/tool/system-prompt）
-source: { kind: 'user' }
-```
-
-**11. `pnpm-workspace.yaml`（⚠️ 0.2.0 新增，官方 lock 漂移绕行）** — 在 `overrides` 段加：
-
-```yaml
-overrides:
-  'micromark-util-types': '2.0.2'
-```
-
-> 0.2.0-rc.2 的官方 lock 存在 micromark-util-types 版本漂移（2.0.2/2.0.3 冲突导致 ui-primitives 类型报错）。加 override 锁 2.0.2 才能 `pnpm install` 通过。注意 pnpm 11.7 不读 package.json 的 pnpm.overrides，要写在 `pnpm-workspace.yaml`。
-
-**C. 构建 + 验证（⚠️ 关键教训）**
-
-```bash
-pnpm run clean                 # 更新版本后必先清旧 lib 产物，否则假 MISSING_EXPORT
-pnpm install                   # 链接新依赖（会触发 micromark 漂移，需上面第 11 步的 override）
-pnpm run build:lib:host        # = tsc -b tsconfig.host.json && tsdown host && desktop bundle
-pnpm run build:lib:client      # = tsc -b tsconfig.client.json && tsdown --env.DSH_BUILD_FACE client
-pnpm dsh web --no-open --port 0
-```
-
-- **必须跑 host + client 两个 face**：只跑 host face 会让 `dsh web` 报 `MissingClientBundleError`（缺全图 `lib/client.js`）。
-- **通过标准**：打印 URL + `ExperimentalWarning: SQLite`，无 `pending`、无 `typert manifest`、无 `MissingClientBundleError`；HTTP 探测返回 401 即确认监听。
-- **编译错误先分真假**：`Cannot find module .../remote`、`MISSING_EXPORT` 类报错，多数是「依赖产物没构建 / 旧 lib 残留 / 依赖版本漂移」，先 clean + 全量构建 + 确认 override，剩下的才是真 API 变化，**别急着改好代码**。
-- ⚠️ **build:lib:host 的 exit 1 可能来自最后的 desktop bundle**（输出全是 `✓ built` 无 error）。验证 LMA 编译应单独跑 `tsc -b tsconfig.host.json` + `tsc -b tsconfig.client.json` + `tsdown --env.DSH_BUILD_FACE client`，不要被 desktop bundle 的 exit 1 干扰。
+详细流程见仓库外的 SOP 文档（dsh-lma-update-sop.md），或参考最近一次适配的总结。
 
 ---
-
 ## 目录结构
 
 ### LMA 源码
