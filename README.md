@@ -395,17 +395,17 @@ LMA 走的是相反的 **Top-down Axiomatic Partitioning（自顶向下的公理
 
 **定义 1（族 Family / 记忆群）**：LMA 将全集 $V$ 划分为 $m$ 个互不相交的子空间 $\mathcal{F} = \{F_1, \dots, F_m\}$，满足三个性质：
 
-1. **完备性**：$V = \bigcup_{i=1}^{m} F_i$
+1. **完备性**：$V = \cup_{i=1}^{m} F_i$
 2. **互斥性**：$\forall\, i \neq j,\; F_i \cap F_j = \emptyset$
-3. **直和性**：$V = \bigoplus_{i=1}^{m} F_i$
+3. **直和性**：$V = \oplus_{i=1}^{m} F_i$
 
 传统聚类允许一个向量以不同的概率同时属于多个簇（软聚类的隶属度）。但在 LMA 中，一个向量一旦被挂载写入某个族 $F_i$，它在拓扑上就被绝对固定于 $F_i$——任何检索算法的搜索算力，在进入 $F_i$ 的瞬间，就在数学上被截断了与其他族的连通性。
 
-**定义 2（簇 Cluster / 记忆体）**：在族 $F_i$ 内部，系统基于语义一致性建立划分 $\mathcal{C}_i = \{C_{i1}, \dots, C_{ik}\}$，满足 $F_i = \bigcup_{j=1}^{k} C_{ij}$ 且互不相交。
+**定义 2（簇 Cluster / 记忆体）**：在族 $F_i$ 内部，系统基于语义一致性建立划分 $\mathcal{C}_i = \{C_{i1}, \dots, C_{ik}\}$，满足 $F_i = \cup_{j=1}^{k} C_{ij}$ 且互不相交。
 
 根据高维几何的「距离集中现象」，当维度 $d \to \infty$ 时，任意两个随机向量的距离变异系数趋于零：
 
-$$\frac{\sqrt{\operatorname{Var}(\|x - y\|_2)}}{\mathbb{E}(\|x - y\|_2)} \to 0$$
+$$\frac{\sqrt{\mathrm{Var}(\|x - y\|_2)}}{\mathrm{E}(\|x - y\|_2)} \to 0$$
 
 这意味着「距离近」越来越不代表「语义相关」。LMA 的簇本质上是把距离度量**限制在局部紧致集 $C_{ij}$ 内**，度量环境的信噪比远高于全局空间。
 
@@ -413,7 +413,7 @@ $$\frac{\sqrt{\operatorname{Var}(\|x - y\|_2)}}{\mathbb{E}(\|x - y\|_2)} \to 0$$
 
 **集合论映射**：设全量词条集合为 $U$，任何元素满足唯一归属：
 
-$$\forall\, x \in U,\quad \exists!\, (F_i, C_{ij})\ \text{ 使得 }\ x \in C_{ij} \subset F_i$$
+$$\forall\, x \in U,\ \exists!\,(F_i, C_{ij}):\ x \in C_{ij} \subset F_i$$
 
 这种严格嵌套切断了跨域的语义跃迁路径。
 
